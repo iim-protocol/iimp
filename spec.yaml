@@ -1,0 +1,8 @@
+components:
+  schemas:
+
+spec:
+  apiName: Internet Instant Messaging Protocol (IIMP)
+  description: A protocol for real-time communication over the internet, enabling users to exchange messages, share files, and engage in group chats.
+  version: 1.0.0
+  website: https://github.com/iimp/iimp
