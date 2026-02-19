@@ -1,4 +1,4 @@
-# IIMP — Inter/Intra Organization Messaging Protocol
+# IIMP (Internet Instant Messaging Protocol) — Inter/Intra Organization Messaging Protocol
 
 ### v0.1 Draft Specification (Academic Version)
 
