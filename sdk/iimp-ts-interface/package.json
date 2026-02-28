@@ -1,0 +1,40 @@
+
+{
+  "name": "iimp-ts-interface",
+  "version": "1.0.0",
+  
+  "description": "TypeScript SDK for the IIMP Specification, providing type definitions and utilities for implementing the IIMP protocol in TypeScript applications.",
+  
+  
+  "homepage": "https://github.com/iim-protocol/iimp",
+  
+  
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iim-protocol/iimp.git"
+  },
+  
+  
+  "license": "Apache-2.0",
+  
+  
+  "author": "Naman B Gor <devnamangor@gmail.com>",
+  
+  
+  "keywords": [
+    "IIMP",
+    "TypeScript",
+    "SDK",
+    "Interface",
+    "Protocol"
+  ],
+  
+  "main": "dist/api.js",
+  "types": "dist/api.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
