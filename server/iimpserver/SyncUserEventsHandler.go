@@ -9,7 +9,7 @@ import (
 
 const (
 	SyncUserEventsRequestHTTPMethod = "GET"
-	SyncUserEventsRequestRoutePath  = "/api/client/events/sync"
+	SyncUserEventsRequestRoutePath  = "/iimp/api/client/events/sync"
 )
 
 // Fetch a list of events for the authenticated user.
@@ -91,7 +91,7 @@ type SyncUserEvents200Response struct {
 
 type SyncUserEvents200ResponseBodyEventsItem struct {
 
-	// The timestamp when the event was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+	// The timestamp when the event was created. Format => RFC3339.
 	//
 	// Required
 	//

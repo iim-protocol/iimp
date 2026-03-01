@@ -9,7 +9,7 @@ import (
 
 const (
 	GetUserInfoFederationRequestHTTPMethod = "GET"
-	GetUserInfoFederationRequestRoutePath  = "/api/federation/users/{userId}"
+	GetUserInfoFederationRequestRoutePath  = "/iimp/api/federation/users/{userId}"
 )
 
 // \"FEDERATION\" Retrieve information about a user for federation purposes. This endpoint is used by other servers to fetch details about a user, such as their display name and more.

@@ -9,7 +9,7 @@ import (
 
 const (
 	UploadAttachmentRequestHTTPMethod = "PUT"
-	UploadAttachmentRequestRoutePath  = "/api/client/attachments/{attachmentId}/bytes"
+	UploadAttachmentRequestRoutePath  = "/iimp/api/client/attachments/{attachmentId}/bytes"
 )
 
 // Upload the bytes of an attachment. The bytes go in the request body.

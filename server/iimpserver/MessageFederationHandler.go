@@ -9,7 +9,7 @@ import (
 
 const (
 	MessageFederationRequestHTTPMethod = "POST"
-	MessageFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages"
+	MessageFederationRequestRoutePath  = "/iimp/api/federation/conversations/{conversationId}/messages"
 )
 
 // \"FEDERATION\" Send a new message/update to an existing message model to a conversation from another server. This endpoint is used by other servers to send messages to a conversation that includes users from the local server. The request will include details about the message and its sender. Upsert operation must be performed by the receiving server.
@@ -72,7 +72,7 @@ type MessageFederationRequestBody struct {
 	// Must be non-empty
 	SenderUserId string `json:"SenderUserId"`
 
-	// The timestamp when the message was originally sent. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message was sent, which can be useful for ordering messages and displaying timestamps in the client applications.
+	// The timestamp when the message was originally sent. Format => RFC3339. This field is included to provide context about when the message was sent, which can be useful for ordering messages and displaying timestamps in the client applications.
 	//
 	// Required
 	//
@@ -123,7 +123,7 @@ type MessageFederationRequestBodyContentsItemMessageContent struct {
 	// Must be non-empty
 	Nonce string `json:"Nonce"`
 
-	// The timestamp when the message content was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
+	// The timestamp when the message content was created. Format => RFC3339. This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
 	//
 	// Required
 	//
@@ -180,7 +180,7 @@ type MessageFederationRequestBodyContentsItemMessageContentEncryptionDataItemEnc
 
 type MessageFederationRequestBodyUserSpecificDataItem struct {
 
-	// The timestamp when the recipient reacted to the message. This field is null if the recipient has not reacted to the message yet. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when each reaction was made for the message.
+	// The timestamp when the recipient reacted to the message. This field is null if the recipient has not reacted to the message yet. Format => RFC3339. This field is included to provide context about when each reaction was made for the message.
 	//
 	// Optional
 	//
@@ -192,7 +192,7 @@ type MessageFederationRequestBodyUserSpecificDataItem struct {
 	//
 	Reaction *string `json:"Reaction,omitempty"`
 
-	// The timestamp when the recipient read the message. This field is null if the recipient has not read the message yet. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide read receipt functionality, allowing the sender to know when each recipient has read the message.
+	// The timestamp when the recipient read the message. This field is null if the recipient has not read the message yet. Format => RFC3339. This field is included to provide read receipt functionality, allowing the sender to know when each recipient has read the message.
 	//
 	// Optional
 	//

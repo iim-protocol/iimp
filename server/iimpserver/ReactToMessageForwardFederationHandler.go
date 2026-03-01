@@ -9,7 +9,7 @@ import (
 
 const (
 	ReactToMessageForwardFederationRequestHTTPMethod = "POST"
-	ReactToMessageForwardFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages/{messageId}/react/forward"
+	ReactToMessageForwardFederationRequestRoutePath  = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/react/forward"
 )
 
 // \"FEDERATION\" React to a message in a conversation on another server.

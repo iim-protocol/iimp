@@ -8,7 +8,7 @@ import (
 
 const (
 	LogoutRequestHTTPMethod = "POST"
-	LogoutRequestRoutePath  = "/api/client/logout"
+	LogoutRequestRoutePath  = "/iimp/api/client/logout"
 )
 
 // Log out the current user and invalidate the session.
@@ -64,6 +64,22 @@ func WriteLogout204Response(w http.ResponseWriter, response Logout204Response) e
 
 	// Set status code and write the header
 	w.WriteHeader(204)
+	return nil
+
+}
+
+type Logout400Response struct {
+}
+
+// Invalid request.
+//
+// This function WILL CALL w.WriteHeader(), so ensure that no other calls to
+// w.WriteHeader() are made before calling this function.
+func WriteLogout400Response(w http.ResponseWriter, response Logout400Response) error {
+	// Set headers, if any
+
+	// Set status code and write the header
+	w.WriteHeader(400)
 	return nil
 
 }

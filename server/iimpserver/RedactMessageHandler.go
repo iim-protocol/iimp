@@ -8,7 +8,7 @@ import (
 
 const (
 	RedactMessageRequestHTTPMethod = "POST"
-	RedactMessageRequestRoutePath  = "/api/client/conversations/{conversationId}/messages/{messageId}/redact"
+	RedactMessageRequestRoutePath  = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/redact"
 )
 
 // Redact a message in a conversation. If this conversation is a Direct Conversation, only the sender of the message can redact it. If this conversation is a Group Conversation, only the sender of the message or the owner of the conversation can redact it.

@@ -9,7 +9,7 @@ import (
 
 const (
 	AddPublicKeyRequestHTTPMethod = "POST"
-	AddPublicKeyRequestRoutePath  = "/api/client/keys"
+	AddPublicKeyRequestRoutePath  = "/iimp/api/client/keys"
 )
 
 // Add a new public key for end-to-end encryption.

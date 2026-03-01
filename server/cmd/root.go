@@ -26,9 +26,6 @@ var rootCmd = &cobra.Command{
 	Use:   "iimp-server",
 	Short: "IIMP Server is a reference implementation of the IIMP protocol, designed to facilitate real-time communication over the internet.",
 	Long:  `IIMP Server is a reference implementation of the IIMP protocol, designed to facilitate real-time communication over the internet. It provides a robust and scalable server-side solution for handling client connections, managing conversations, and processing messages in accordance with the IIMP specifications.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -41,13 +38,5 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.server.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// nothing in the root command for now, but we can add global flags here in the future if needed
 }

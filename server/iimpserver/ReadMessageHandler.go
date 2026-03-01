@@ -8,7 +8,7 @@ import (
 
 const (
 	ReadMessageRequestHTTPMethod = "POST"
-	ReadMessageRequestRoutePath  = "/api/client/conversations/{conversationId}/messages/{messageId}/read"
+	ReadMessageRequestRoutePath  = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/read"
 )
 
 // Mark a message as read by the authenticated user.

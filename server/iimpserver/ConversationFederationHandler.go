@@ -9,7 +9,7 @@ import (
 
 const (
 	ConversationFederationRequestHTTPMethod = "POST"
-	ConversationFederationRequestRoutePath  = "/api/federation/conversations"
+	ConversationFederationRequestRoutePath  = "/iimp/api/federation/conversations"
 )
 
 // \"FEDERATION\" Create/Update a conversation from another server. This endpoint is used by other servers to create/update a conversation that includes users from the local server. UPSERT operation should be performed by the receiving server.
@@ -44,7 +44,7 @@ type ConversationFederationRequestBody struct {
 	// Must be non-empty
 	ConversationOwnerId string `json:"ConversationOwnerId"`
 
-	// The timestamp when the conversation was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+	// The timestamp when the conversation was created. Format => RFC3339.
 	//
 	// Required
 	//
@@ -68,14 +68,14 @@ type ConversationFederationRequestBodyParticipantsItem struct {
 	// Must be non-empty
 	ConversationId string `json:"ConversationId"`
 
-	// The timestamp when the participant joined the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+	// The timestamp when the participant joined the conversation. Format => RFC3339.
 	//
 	// Required
 	//
 	// Must be non-empty
 	JoinedAt string `json:"JoinedAt"`
 
-	// The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
+	// The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => RFC3339. A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
 	//
 	// Optional
 	//

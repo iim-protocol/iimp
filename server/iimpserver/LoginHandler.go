@@ -9,7 +9,7 @@ import (
 
 const (
 	LoginRequestHTTPMethod = "POST"
-	LoginRequestRoutePath  = "/api/client/login"
+	LoginRequestRoutePath  = "/iimp/api/client/login"
 )
 
 // Authenticate a user and establish a session.
@@ -108,6 +108,38 @@ func NewLoginRequest(w http.ResponseWriter, r *http.Request) (req LoginRequest, 
 }
 
 type Login200Response struct {
+
+	// Response body
+	Body Login200ResponseBody
+}
+
+type Login200ResponseBody struct {
+
+	// A new token used to refresh the session token when it expires. Previous refresh tokens are invalidated when a new refresh token is issued.
+	//
+	// Required
+	//
+	// Must be non-empty
+	RefreshToken string `json:"RefreshToken"`
+
+	// The timestamp of when the refresh token expires. Format => RFC3339
+	//
+	// Required
+	//
+	RefreshTokenExpiry string `json:"RefreshTokenExpiry"`
+
+	// A new token used to authenticate the client session. This token must be included in the header of subsequent requests to access protected resources.
+	//
+	// Required
+	//
+	// Must be non-empty
+	SessionToken string `json:"SessionToken"`
+
+	// The timestamp of when the session token expires. Format => RFC3339
+	//
+	// Required
+	//
+	SessionTokenExpiry string `json:"SessionTokenExpiry"`
 }
 
 // Successful operation.
@@ -117,9 +149,14 @@ type Login200Response struct {
 func WriteLogin200Response(w http.ResponseWriter, response Login200Response) error {
 	// Set headers, if any
 
+	// Set Content-Type
+	w.Header().Set("Content-Type", "application/json")
+
 	// Set status code and write the header
 	w.WriteHeader(200)
-	return nil
+
+	// Write body
+	return json.NewEncoder(w).Encode(response.Body)
 
 }
 

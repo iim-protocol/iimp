@@ -9,7 +9,7 @@ import (
 
 const (
 	UpdateConversationRequestHTTPMethod = "PUT"
-	UpdateConversationRequestRoutePath  = "/api/client/conversations/{conversationId}"
+	UpdateConversationRequestRoutePath  = "/iimp/api/client/conversations/{conversationId}"
 )
 
 // Update an existing conversation. Only for Group Conversations, Direct Conversations cannot be updated.
@@ -210,14 +210,14 @@ type UpdateConversation200ResponseBodyConversationParticipantsItem struct {
 	// Must be non-empty
 	ConversationId string `json:"ConversationId"`
 
-	// The timestamp when the participant joined the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+	// The timestamp when the participant joined the conversation. Format => RFC3339.
 	//
 	// Required
 	//
 	// Must be non-empty
 	JoinedAt string `json:"JoinedAt"`
 
-	// The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
+	// The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => RFC3339. A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
 	//
 	// Optional
 	//
@@ -260,7 +260,7 @@ type UpdateConversation200ResponseBodyConversation struct {
 	// Must be non-empty
 	ConversationOwnerId string `json:"ConversationOwnerId"`
 
-	// The timestamp when the conversation was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+	// The timestamp when the conversation was created. Format => RFC3339.
 	//
 	// Required
 	//

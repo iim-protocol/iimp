@@ -9,7 +9,7 @@ import (
 
 const (
 	ResetPasswordRequestHTTPMethod = "POST"
-	ResetPasswordRequestRoutePath  = "/api/client/reset-password"
+	ResetPasswordRequestRoutePath  = "/iimp/api/client/reset-password"
 )
 
 // Reset the password for the user account.

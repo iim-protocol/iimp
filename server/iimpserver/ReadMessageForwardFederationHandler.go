@@ -9,7 +9,7 @@ import (
 
 const (
 	ReadMessageForwardFederationRequestHTTPMethod = "POST"
-	ReadMessageForwardFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages/{messageId}/read/forward"
+	ReadMessageForwardFederationRequestRoutePath  = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/read/forward"
 )
 
 // \"FEDERATION\" Mark a message as read in a conversation on another server.

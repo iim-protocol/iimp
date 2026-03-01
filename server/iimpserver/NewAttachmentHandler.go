@@ -9,7 +9,7 @@ import (
 
 const (
 	NewAttachmentRequestHTTPMethod = "POST"
-	NewAttachmentRequestRoutePath  = "/api/client/attachments"
+	NewAttachmentRequestRoutePath  = "/iimp/api/client/attachments"
 )
 
 // Upload an attachment to be included with a message.

@@ -9,7 +9,7 @@ import (
 
 const (
 	EditMessageForwardFederationRequestHTTPMethod = "PUT"
-	EditMessageForwardFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages/{messageId}/edit/forward"
+	EditMessageForwardFederationRequestRoutePath  = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/edit/forward"
 )
 
 // \"FEDERATION\" Edit a message in a conversation on another server.
@@ -84,7 +84,7 @@ type EditMessageForwardFederationRequestBodyUpdatedMessageMessageContent struct 
 	// Must be non-empty
 	Nonce string `json:"Nonce"`
 
-	// The timestamp when the message content was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
+	// The timestamp when the message content was created. Format => RFC3339. This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
 	//
 	// Required
 	//

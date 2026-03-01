@@ -8,7 +8,7 @@ import (
 
 const (
 	FetchAttachmentBytesRequestHTTPMethod = "GET"
-	FetchAttachmentBytesRequestRoutePath  = "/api/client/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes"
+	FetchAttachmentBytesRequestRoutePath  = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes"
 )
 
 // Fetch the bytes of an attachment for a message in a conversation. This is a NOOP endpoint for documentation, since the actual fetching of the attachment bytes is to be done by the client.

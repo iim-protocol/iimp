@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+var IIMPVersion = "0.0.1"
+
 func parsefloat64Param(param string, paramName string, required bool) (*float64, error) {
 	param = strings.TrimSpace(param)
 	if param == "" {

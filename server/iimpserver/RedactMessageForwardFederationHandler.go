@@ -9,7 +9,7 @@ import (
 
 const (
 	RedactMessageForwardFederationRequestHTTPMethod = "POST"
-	RedactMessageForwardFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages/{messageId}/redact/forward"
+	RedactMessageForwardFederationRequestRoutePath  = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/redact/forward"
 )
 
 // \"FEDERATION\" Redact a message in a conversation on another server.

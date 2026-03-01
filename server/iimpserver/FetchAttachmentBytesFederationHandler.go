@@ -8,7 +8,7 @@ import (
 
 const (
 	FetchAttachmentBytesFederationRequestHTTPMethod = "GET"
-	FetchAttachmentBytesFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes"
+	FetchAttachmentBytesFederationRequestRoutePath  = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes"
 )
 
 // \"FEDERATION\" Fetch the bytes of an attachment from another server. This is a noop endpoint for documentation purposes, the server should implement fetching the actual bytes using the provided endpoint. Server must implement this, requesting server needs to fetch the bytes NOT using the SDK.

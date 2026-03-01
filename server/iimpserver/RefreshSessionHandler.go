@@ -9,7 +9,7 @@ import (
 
 const (
 	RefreshSessionRequestHTTPMethod = "POST"
-	RefreshSessionRequestRoutePath  = "/api/client/refresh-session"
+	RefreshSessionRequestRoutePath  = "/iimp/api/client/refresh-session"
 )
 
 // Refresh the session token.
@@ -80,6 +80,38 @@ func NewRefreshSessionRequest(w http.ResponseWriter, r *http.Request) (req Refre
 }
 
 type RefreshSession200Response struct {
+
+	// Response body
+	Body RefreshSession200ResponseBody
+}
+
+type RefreshSession200ResponseBody struct {
+
+	// A new token used to refresh the session token when it expires. Previous refresh tokens are invalidated when a new refresh token is issued.
+	//
+	// Required
+	//
+	// Must be non-empty
+	RefreshToken string `json:"RefreshToken"`
+
+	// The timestamp of when the refresh token expires. Format => RFC3339
+	//
+	// Required
+	//
+	RefreshTokenExpiry string `json:"RefreshTokenExpiry"`
+
+	// A new token used to authenticate the client session. This token must be included in the header of subsequent requests to access protected resources.
+	//
+	// Required
+	//
+	// Must be non-empty
+	SessionToken string `json:"SessionToken"`
+
+	// The timestamp of when the session token expires. Format => RFC3339
+	//
+	// Required
+	//
+	SessionTokenExpiry string `json:"SessionTokenExpiry"`
 }
 
 // Successful operation.
@@ -89,8 +121,29 @@ type RefreshSession200Response struct {
 func WriteRefreshSession200Response(w http.ResponseWriter, response RefreshSession200Response) error {
 	// Set headers, if any
 
+	// Set Content-Type
+	w.Header().Set("Content-Type", "application/json")
+
 	// Set status code and write the header
 	w.WriteHeader(200)
+
+	// Write body
+	return json.NewEncoder(w).Encode(response.Body)
+
+}
+
+type RefreshSession400Response struct {
+}
+
+// Invalid input data.
+//
+// This function WILL CALL w.WriteHeader(), so ensure that no other calls to
+// w.WriteHeader() are made before calling this function.
+func WriteRefreshSession400Response(w http.ResponseWriter, response RefreshSession400Response) error {
+	// Set headers, if any
+
+	// Set status code and write the header
+	w.WriteHeader(400)
 	return nil
 
 }

@@ -9,7 +9,7 @@ import (
 
 const (
 	SignUpRequestHTTPMethod = "POST"
-	SignUpRequestRoutePath  = "/api/client/signup"
+	SignUpRequestRoutePath  = "/iimp/api/client/signup"
 )
 
 // Register a new user account with the IIMP service.
@@ -21,11 +21,12 @@ type SignUpRequest struct {
 
 type SignUpRequestBody struct {
 
-	// Optional display name for the user.
+	// Display name for the user.
 	//
-	// Optional
+	// Required
 	//
-	DisplayName *string `json:"DisplayName,omitempty"`
+	// Must be non-empty
+	DisplayName string `json:"DisplayName"`
 
 	// Email address for the new account. This can be same as the user ID or a different email address. The email address will be used for account recovery.
 	//
@@ -55,7 +56,7 @@ func NewSignUpRequestBody(data map[string]any) (SignUpRequestBody, error) {
 	valDisplayName, ok := data["DisplayName"]
 	if !ok {
 
-		// skip, leave as zero value
+		return body, fmt.Errorf("missing required field 'DisplayName'")
 
 	} else {
 
@@ -64,7 +65,12 @@ func NewSignUpRequestBody(data map[string]any) (SignUpRequestBody, error) {
 			return body, fmt.Errorf("field 'DisplayName' has incorrect type")
 		}
 
-		body.DisplayName = &valDisplayNameTyped
+		valDisplayNameTyped = strings.TrimSpace(valDisplayNameTyped)
+		if len(valDisplayNameTyped) == 0 {
+			return body, fmt.Errorf("field 'DisplayName' must be non-empty")
+		}
+
+		body.DisplayName = valDisplayNameTyped
 
 	}
 
@@ -185,6 +191,22 @@ func WriteSignUp400Response(w http.ResponseWriter, response SignUp400Response) e
 
 	// Set status code and write the header
 	w.WriteHeader(400)
+	return nil
+
+}
+
+type SignUp403Response struct {
+}
+
+// Forbidden. The server may reject the registration request if the provided email address does not meet domain restrictions.
+//
+// This function WILL CALL w.WriteHeader(), so ensure that no other calls to
+// w.WriteHeader() are made before calling this function.
+func WriteSignUp403Response(w http.ResponseWriter, response SignUp403Response) error {
+	// Set headers, if any
+
+	// Set status code and write the header
+	w.WriteHeader(403)
 	return nil
 
 }

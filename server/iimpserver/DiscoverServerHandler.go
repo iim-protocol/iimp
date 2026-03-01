@@ -28,19 +28,12 @@ type DiscoverServer200Response struct {
 
 type DiscoverServer200ResponseBody struct {
 
-	// Canonical domain name of the server.
+	// Canonical domain name of the server. Includes the scheme, e.g. https://server-a.domain1.me
 	//
 	// Required
 	//
 	// Must be non-empty
 	Domain string `json:"Domain"`
-
-	// URL endpoint for federation with other IIMP servers.
-	//
-	// Required
-	//
-	// Must be non-empty
-	FederationEndpoint string `json:"FederationEndpoint"`
 
 	// IIMP protocol version supported by the server.
 	//
@@ -65,6 +58,22 @@ func WriteDiscoverServer200Response(w http.ResponseWriter, response DiscoverServ
 
 	// Write body
 	return json.NewEncoder(w).Encode(response.Body)
+
+}
+
+type DiscoverServer404Response struct {
+}
+
+// The requested resource was not found. This could occur if the server does not support the IIMP protocol.
+//
+// This function WILL CALL w.WriteHeader(), so ensure that no other calls to
+// w.WriteHeader() are made before calling this function.
+func WriteDiscoverServer404Response(w http.ResponseWriter, response DiscoverServer404Response) error {
+	// Set headers, if any
+
+	// Set status code and write the header
+	w.WriteHeader(404)
+	return nil
 
 }
 

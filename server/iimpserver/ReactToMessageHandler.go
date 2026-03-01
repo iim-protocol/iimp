@@ -9,7 +9,7 @@ import (
 
 const (
 	ReactToMessageRequestHTTPMethod = "POST"
-	ReactToMessageRequestRoutePath  = "/api/client/conversations/{conversationId}/messages/{messageId}/react"
+	ReactToMessageRequestRoutePath  = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/react"
 )
 
 // React to a message in a conversation.

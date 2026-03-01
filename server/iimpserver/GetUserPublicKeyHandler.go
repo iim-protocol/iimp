@@ -10,7 +10,7 @@ const (
 	GetUserPublicKeyRequestRoutePath  = "/.well-known/iimp/keys/users/{userId}"
 )
 
-// Retrieve the public key associated with a specific user.
+// Retrieve the latest/most recent public key associated with a specific user.
 type GetUserPublicKeyRequest struct {
 
 	// Source: path parameter "{userId}"
@@ -57,7 +57,7 @@ type GetUserPublicKey200ResponseBody struct {
 	// Must be non-empty
 	PublicKey string `json:"PublicKey"`
 
-	// Timestamp indicating when the public key was uploaded, in ISO 8601 format.
+	// Timestamp indicating when the public key was uploaded, in RFC3339 format.
 	//
 	// Required
 	//
@@ -87,6 +87,22 @@ func WriteGetUserPublicKey200Response(w http.ResponseWriter, response GetUserPub
 
 	// Write body
 	return json.NewEncoder(w).Encode(response.Body)
+
+}
+
+type GetUserPublicKey400Response struct {
+}
+
+// Invalid input data.
+//
+// This function WILL CALL w.WriteHeader(), so ensure that no other calls to
+// w.WriteHeader() are made before calling this function.
+func WriteGetUserPublicKey400Response(w http.ResponseWriter, response GetUserPublicKey400Response) error {
+	// Set headers, if any
+
+	// Set status code and write the header
+	w.WriteHeader(400)
+	return nil
 
 }
 

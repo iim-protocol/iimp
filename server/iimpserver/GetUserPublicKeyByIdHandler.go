@@ -72,7 +72,7 @@ type GetUserPublicKeyById200ResponseBody struct {
 	// Must be non-empty
 	PublicKey string `json:"PublicKey"`
 
-	// Timestamp indicating when the public key was uploaded, in ISO 8601 format.
+	// Timestamp indicating when the public key was uploaded, in RFC3339 format.
 	//
 	// Required
 	//
@@ -102,6 +102,22 @@ func WriteGetUserPublicKeyById200Response(w http.ResponseWriter, response GetUse
 
 	// Write body
 	return json.NewEncoder(w).Encode(response.Body)
+
+}
+
+type GetUserPublicKeyById400Response struct {
+}
+
+// Invalid input data.
+//
+// This function WILL CALL w.WriteHeader(), so ensure that no other calls to
+// w.WriteHeader() are made before calling this function.
+func WriteGetUserPublicKeyById400Response(w http.ResponseWriter, response GetUserPublicKeyById400Response) error {
+	// Set headers, if any
+
+	// Set status code and write the header
+	w.WriteHeader(400)
+	return nil
 
 }
 
