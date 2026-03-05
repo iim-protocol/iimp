@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	dbmodels "github.com/iim-protocol/iimp/sdk/db-models"
 	"github.com/iim-protocol/iimp/server/auth"
 	"github.com/iim-protocol/iimp/server/db"
 	"github.com/iim-protocol/iimp/server/iimpserver"
@@ -23,7 +24,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	sessionToken := strings.TrimPrefix(*req.Auth.Authorization, "Bearer ")
 
 	// Validate session token
-	claims, err := auth.ValidateSessionToken(sessionToken)
+	claims, err := auth.ValidateSessionToken(r.Context(), sessionToken)
 	if err != nil {
 		logger.Error.Println("error validating session token for Logout request:", err)
 		iimpserver.WriteLogout401Response(w, iimpserver.Logout401Response{})
@@ -32,7 +33,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 
 	// Invalidate the session token (implementation depends on how sessions are stored)
 	filter := bson.D{{Key: "session_token_id", Value: claims.ID}}
-	_, err = db.DB.Collection(db.SessionsCollection).DeleteOne(r.Context(), filter)
+	_, err = db.DB.Collection(dbmodels.SessionsCollection).DeleteOne(r.Context(), filter)
 	if err != nil {
 		logger.Error.Println("error invalidating session token for Logout request:", err)
 		iimpserver.WriteLogout500Response(w, iimpserver.Logout500Response{})

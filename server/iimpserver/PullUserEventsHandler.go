@@ -8,34 +8,34 @@ import (
 )
 
 const (
-	SyncUserEventsRequestHTTPMethod = "GET"
-	SyncUserEventsRequestRoutePath  = "/iimp/api/client/events/sync"
+	PullUserEventsRequestHTTPMethod = "GET"
+	PullUserEventsRequestRoutePath  = "/iimp/api/client/events"
 )
 
 // Fetch a list of events for the authenticated user.
-type SyncUserEventsRequest struct {
+type PullUserEventsRequest struct {
 
 	// Source: query parameter "cursor"
 	//
 
-	// A cursor (Monotonically increasing per-user sequence number) for pagination. The server will return events starting from this cursor. If not provided, the server will return all available events starting from the oldest event in the system. The response will include a next_cursor field that can be used to fetch the next page of results.
+	// A cursor (for this use case, MongoDB's ObjectID) for pagination. The server will return events starting from this cursor. If not provided, the server will return all available events starting from the oldest event in the system. The response will include a next_cursor field that can be used to fetch the next page of results.
 	//
 	// Optional
-	Cursor *float64
+	Cursor *string
 
 	// Source: query parameter "limit"
 	//
 
-	// The maximum number of events to return in the response. If not provided, the server will use a default limit (e.g., 50). The server may enforce a maximum limit (100) to prevent excessively large responses.
+	// The maximum number of events to return in the response. If not provided, the server will use a default limit (50). The server may enforce a maximum limit (100) to prevent excessively large responses.
 	//
 	// Optional
 	Limit *float64
 
 	// Authentication parameters
-	Auth SyncUserEventsRequestAuthParams
+	Auth PullUserEventsRequestAuthParams
 }
 
-type SyncUserEventsRequestAuthParams struct {
+type PullUserEventsRequestAuthParams struct {
 
 	// Required Authentication Method
 	// Source: header "Authorization"
@@ -47,10 +47,10 @@ type SyncUserEventsRequestAuthParams struct {
 	Authorization *string
 }
 
-// NewSyncUserEventsRequest creates a new SyncUserEventsRequest from an http.Request and performs parameter parsing and validation.
-func NewSyncUserEventsRequest(w http.ResponseWriter, r *http.Request) (req SyncUserEventsRequest, err error) {
+// NewPullUserEventsRequest creates a new PullUserEventsRequest from an http.Request and performs parameter parsing and validation.
+func NewPullUserEventsRequest(w http.ResponseWriter, r *http.Request) (req PullUserEventsRequest, err error) {
 
-	valCursor, err := parsefloat64Param(r.URL.Query().Get("cursor"), "query: cursor", false)
+	valCursor, err := parsestringParam(r.URL.Query().Get("cursor"), "query: cursor", false)
 	if err != nil {
 		return
 	}
@@ -83,13 +83,13 @@ func NewSyncUserEventsRequest(w http.ResponseWriter, r *http.Request) (req SyncU
 	return
 }
 
-type SyncUserEvents200Response struct {
+type PullUserEvents200Response struct {
 
 	// Response body
-	Body SyncUserEvents200ResponseBody
+	Body PullUserEvents200ResponseBody
 }
 
-type SyncUserEvents200ResponseBodyEventsItem struct {
+type PullUserEvents200ResponseBodyEventsItem struct {
 
 	// The timestamp when the event was created. Format => RFC3339.
 	//
@@ -102,7 +102,7 @@ type SyncUserEvents200ResponseBodyEventsItem struct {
 	//
 	// Required
 	//
-	EventId float64 `json:"EventId"`
+	EventId string `json:"EventId"`
 
 	// The type of the event (e.g., "message_received", "conversation_created", etc.). This field can be used by the client to determine how to process the event. For a full list of event types and their corresponding payload structures, refer to the IIMP Client Events documentation [here](https://github.com/iim-protocol/iimp/tree/main/Events.md).
 	//
@@ -116,28 +116,35 @@ type SyncUserEvents200ResponseBodyEventsItem struct {
 	// Optional
 	//
 	Payload *map[string]any `json:"Payload,omitempty"`
+
+	// User ID of the user to whom the event belongs. (localpart@domain)
+	//
+	// Required
+	//
+	// Must be non-empty
+	UserId string `json:"UserId"`
 }
 
-type SyncUserEvents200ResponseBody struct {
+type PullUserEvents200ResponseBody struct {
 
 	// A list of events for the authenticated user, if any available. The events are ordered by their EventId in Ascending Order. The server may return up to 'limit' events in the response. If there are more events available beyond the returned list, a 'next_cursor' field will be included in the response, which can be used to fetch the next page of results.
 	//
 	// Required
 	//
-	Events []SyncUserEvents200ResponseBodyEventsItem `json:"Events"`
+	Events []PullUserEvents200ResponseBodyEventsItem `json:"Events"`
 
 	// A cursor for the next page of results, if available. This field will be included in the response if there are more events available beyond the returned list.
 	//
 	// Optional
 	//
-	NextCursor *float64 `json:"NextCursor,omitempty"`
+	NextCursor *string `json:"NextCursor,omitempty"`
 }
 
 // Events fetched successfully.
 //
 // This function WILL CALL w.WriteHeader(), so ensure that no other calls to
 // w.WriteHeader() are made before calling this function.
-func WriteSyncUserEvents200Response(w http.ResponseWriter, response SyncUserEvents200Response) error {
+func WritePullUserEvents200Response(w http.ResponseWriter, response PullUserEvents200Response) error {
 	// Set headers, if any
 
 	// Set Content-Type
@@ -151,14 +158,30 @@ func WriteSyncUserEvents200Response(w http.ResponseWriter, response SyncUserEven
 
 }
 
-type SyncUserEvents401Response struct {
+type PullUserEvents400Response struct {
+}
+
+// Invalid request.
+//
+// This function WILL CALL w.WriteHeader(), so ensure that no other calls to
+// w.WriteHeader() are made before calling this function.
+func WritePullUserEvents400Response(w http.ResponseWriter, response PullUserEvents400Response) error {
+	// Set headers, if any
+
+	// Set status code and write the header
+	w.WriteHeader(400)
+	return nil
+
+}
+
+type PullUserEvents401Response struct {
 }
 
 // Unauthorized. No valid session token provided.
 //
 // This function WILL CALL w.WriteHeader(), so ensure that no other calls to
 // w.WriteHeader() are made before calling this function.
-func WriteSyncUserEvents401Response(w http.ResponseWriter, response SyncUserEvents401Response) error {
+func WritePullUserEvents401Response(w http.ResponseWriter, response PullUserEvents401Response) error {
 	// Set headers, if any
 
 	// Set status code and write the header
@@ -167,14 +190,14 @@ func WriteSyncUserEvents401Response(w http.ResponseWriter, response SyncUserEven
 
 }
 
-type SyncUserEvents500Response struct {
+type PullUserEvents500Response struct {
 }
 
 // Internal server error.
 //
 // This function WILL CALL w.WriteHeader(), so ensure that no other calls to
 // w.WriteHeader() are made before calling this function.
-func WriteSyncUserEvents500Response(w http.ResponseWriter, response SyncUserEvents500Response) error {
+func WritePullUserEvents500Response(w http.ResponseWriter, response PullUserEvents500Response) error {
 	// Set headers, if any
 
 	// Set status code and write the header

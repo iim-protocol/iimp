@@ -18,7 +18,7 @@ type EditMessageRequest struct {
 	// Source: path parameter "{conversationId}"
 	//
 
-	// The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+	// The unique identifier of the conversation that the message belongs to.
 	//
 	// Required
 	ConversationId string
@@ -26,7 +26,7 @@ type EditMessageRequest struct {
 	// Source: path parameter "{messageId}"
 	//
 
-	// The unique identifier of the message to edit. This is typically a UUIDv7
+	// The unique identifier of the message to edit.
 	//
 	// Required
 	MessageId string
@@ -54,7 +54,7 @@ type EditMessageRequestBodyMessageContent struct {
 	// Must be non-empty
 	Content string `json:"Content"`
 
-	// Encryption details for the recipients of the message.
+	// Encryption details for the recipients of the message. The sender client should not include details for participants of a convo where RemovedAt != nil.
 	//
 	// Required
 	//

@@ -7,25 +7,25 @@ import (
 )
 
 const (
-	FetchAttachmentBytesFederationRequestHTTPMethod = "GET"
-	FetchAttachmentBytesFederationRequestRoutePath  = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes"
+	DownloadAttachmentBytesFederationRequestHTTPMethod = "GET"
+	DownloadAttachmentBytesFederationRequestRoutePath  = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes"
 )
 
-// \"FEDERATION\" Fetch the bytes of an attachment from another server. This is a noop endpoint for documentation purposes, the server should implement fetching the actual bytes using the provided endpoint. Server must implement this, requesting server needs to fetch the bytes NOT using the SDK.
-type FetchAttachmentBytesFederationRequest struct {
+// \"FEDERATION\" Download the bytes of an attachment from another server. This is a noop endpoint for documentation purposes, the server should implement fetching the actual bytes using the provided endpoint. Server must implement this, requesting server needs to fetch the bytes NOT using the SDK.
+type DownloadAttachmentBytesFederationRequest struct {
 
-	// Source: path parameter "{attachmentId}"
+	// Source: path parameter "{fileId}"
 	//
 
-	// Unique identifier of the attachment to fetch.
+	// Unique identifier of the file to fetch.
 	//
 	// Required
-	AttachmentId string
+	FileId string
 
 	// Source: path parameter "{messageId}"
 	//
 
-	// Unique identifier of the message that the attachment belongs to.
+	// Unique identifier of the message that the file/attachment belongs to.
 	//
 	// Required
 	MessageId string
@@ -39,10 +39,10 @@ type FetchAttachmentBytesFederationRequest struct {
 	ConversationId string
 
 	// Authentication parameters
-	Auth FetchAttachmentBytesFederationRequestAuthParams
+	Auth DownloadAttachmentBytesFederationRequestAuthParams
 }
 
-type FetchAttachmentBytesFederationRequestAuthParams struct {
+type DownloadAttachmentBytesFederationRequestAuthParams struct {
 
 	// Required Authentication Method
 	// Source: header "Authorization"
@@ -54,15 +54,15 @@ type FetchAttachmentBytesFederationRequestAuthParams struct {
 	Authorization *string
 }
 
-// NewFetchAttachmentBytesFederationRequest creates a new FetchAttachmentBytesFederationRequest from an http.Request and performs parameter parsing and validation.
-func NewFetchAttachmentBytesFederationRequest(w http.ResponseWriter, r *http.Request) (req FetchAttachmentBytesFederationRequest, err error) {
+// NewDownloadAttachmentBytesFederationRequest creates a new DownloadAttachmentBytesFederationRequest from an http.Request and performs parameter parsing and validation.
+func NewDownloadAttachmentBytesFederationRequest(w http.ResponseWriter, r *http.Request) (req DownloadAttachmentBytesFederationRequest, err error) {
 
-	valAttachmentId, err := parsestringParam(r.PathValue("attachmentId"), "path: attachmentId", true)
+	valFileId, err := parsestringParam(r.PathValue("fileId"), "path: fileId", true)
 	if err != nil {
 		return
 	}
 
-	req.AttachmentId = *valAttachmentId
+	req.FileId = *valFileId
 
 	valMessageId, err := parsestringParam(r.PathValue("messageId"), "path: messageId", true)
 	if err != nil {
@@ -97,14 +97,14 @@ func NewFetchAttachmentBytesFederationRequest(w http.ResponseWriter, r *http.Req
 	return
 }
 
-type FetchAttachmentBytesFederation200Response struct {
+type DownloadAttachmentBytesFederation200Response struct {
 }
 
 // Attachment bytes fetched successfully from federation request.
 //
 // This function WILL CALL w.WriteHeader(), so ensure that no other calls to
 // w.WriteHeader() are made before calling this function.
-func WriteFetchAttachmentBytesFederation200Response(w http.ResponseWriter, response FetchAttachmentBytesFederation200Response) error {
+func WriteDownloadAttachmentBytesFederation200Response(w http.ResponseWriter, response DownloadAttachmentBytesFederation200Response) error {
 	// Set headers, if any
 
 	// Set status code and write the header
@@ -113,14 +113,14 @@ func WriteFetchAttachmentBytesFederation200Response(w http.ResponseWriter, respo
 
 }
 
-type FetchAttachmentBytesFederation400Response struct {
+type DownloadAttachmentBytesFederation400Response struct {
 }
 
 // Invalid input data.
 //
 // This function WILL CALL w.WriteHeader(), so ensure that no other calls to
 // w.WriteHeader() are made before calling this function.
-func WriteFetchAttachmentBytesFederation400Response(w http.ResponseWriter, response FetchAttachmentBytesFederation400Response) error {
+func WriteDownloadAttachmentBytesFederation400Response(w http.ResponseWriter, response DownloadAttachmentBytesFederation400Response) error {
 	// Set headers, if any
 
 	// Set status code and write the header
@@ -129,14 +129,14 @@ func WriteFetchAttachmentBytesFederation400Response(w http.ResponseWriter, respo
 
 }
 
-type FetchAttachmentBytesFederation401Response struct {
+type DownloadAttachmentBytesFederation401Response struct {
 }
 
 // Unauthorized. No valid server token provided.
 //
 // This function WILL CALL w.WriteHeader(), so ensure that no other calls to
 // w.WriteHeader() are made before calling this function.
-func WriteFetchAttachmentBytesFederation401Response(w http.ResponseWriter, response FetchAttachmentBytesFederation401Response) error {
+func WriteDownloadAttachmentBytesFederation401Response(w http.ResponseWriter, response DownloadAttachmentBytesFederation401Response) error {
 	// Set headers, if any
 
 	// Set status code and write the header
@@ -145,14 +145,14 @@ func WriteFetchAttachmentBytesFederation401Response(w http.ResponseWriter, respo
 
 }
 
-type FetchAttachmentBytesFederation403Response struct {
+type DownloadAttachmentBytesFederation403Response struct {
 }
 
 // Forbidden. The requesting server is not allowed to access the attachment.
 //
 // This function WILL CALL w.WriteHeader(), so ensure that no other calls to
 // w.WriteHeader() are made before calling this function.
-func WriteFetchAttachmentBytesFederation403Response(w http.ResponseWriter, response FetchAttachmentBytesFederation403Response) error {
+func WriteDownloadAttachmentBytesFederation403Response(w http.ResponseWriter, response DownloadAttachmentBytesFederation403Response) error {
 	// Set headers, if any
 
 	// Set status code and write the header
@@ -161,14 +161,14 @@ func WriteFetchAttachmentBytesFederation403Response(w http.ResponseWriter, respo
 
 }
 
-type FetchAttachmentBytesFederation404Response struct {
+type DownloadAttachmentBytesFederation404Response struct {
 }
 
 // Conversation, message, or attachment not found, or the attachment does not belong to the message or the message does not belong to the conversation specified in the path parameters.
 //
 // This function WILL CALL w.WriteHeader(), so ensure that no other calls to
 // w.WriteHeader() are made before calling this function.
-func WriteFetchAttachmentBytesFederation404Response(w http.ResponseWriter, response FetchAttachmentBytesFederation404Response) error {
+func WriteDownloadAttachmentBytesFederation404Response(w http.ResponseWriter, response DownloadAttachmentBytesFederation404Response) error {
 	// Set headers, if any
 
 	// Set status code and write the header
@@ -177,14 +177,14 @@ func WriteFetchAttachmentBytesFederation404Response(w http.ResponseWriter, respo
 
 }
 
-type FetchAttachmentBytesFederation500Response struct {
+type DownloadAttachmentBytesFederation500Response struct {
 }
 
 // Internal server error while fetching the attachment bytes from federation request.
 //
 // This function WILL CALL w.WriteHeader(), so ensure that no other calls to
 // w.WriteHeader() are made before calling this function.
-func WriteFetchAttachmentBytesFederation500Response(w http.ResponseWriter, response FetchAttachmentBytesFederation500Response) error {
+func WriteDownloadAttachmentBytesFederation500Response(w http.ResponseWriter, response DownloadAttachmentBytesFederation500Response) error {
 	// Set headers, if any
 
 	// Set status code and write the header

@@ -77,6 +77,99 @@ func RegisterHandlers(r *chi.Mux) {
 	)
 
 	// TODO: implement password reset later
+
+	// Public key management endpoints
+	r.HandleFunc(
+		iimpserver.AddPublicKeyRequestRoutePath,
+		withMethod(
+			AddPublicKey,
+			iimpserver.AddPublicKeyRequestHTTPMethod,
+		),
+	)
+
+	// Conversation Endpoints
+	r.HandleFunc(
+		iimpserver.NewConversationRequestRoutePath,
+		withMethod(
+			NewConversation,
+			iimpserver.NewConversationRequestHTTPMethod,
+		),
+	)
+
+	r.HandleFunc(
+		iimpserver.UpdateConversationRequestRoutePath,
+		withMethod(
+			UpdateConversation,
+			iimpserver.UpdateConversationRequestHTTPMethod,
+		),
+	)
+
+	// Message Endpoints
+	r.HandleFunc(
+		iimpserver.NewMessageRequestRoutePath,
+		withMethod(
+			NewMessage,
+			iimpserver.NewMessageRequestHTTPMethod,
+		),
+	)
+
+	r.HandleFunc(
+		iimpserver.EditMessageRequestRoutePath,
+		withMethod(
+			EditMessage,
+			iimpserver.EditMessageRequestHTTPMethod,
+		),
+	)
+
+	r.HandleFunc(
+		iimpserver.RedactMessageRequestRoutePath,
+		withMethod(
+			RedactMessage,
+			iimpserver.RedactMessageRequestHTTPMethod,
+		),
+	)
+
+	r.HandleFunc(
+		iimpserver.ReadMessageRequestRoutePath,
+		withMethod(
+			ReadMessage,
+			iimpserver.ReadMessageRequestHTTPMethod,
+		),
+	)
+
+	r.HandleFunc(
+		iimpserver.ReactToMessageRequestRoutePath,
+		withMethod(
+			ReactToMessage,
+			iimpserver.ReactToMessageRequestHTTPMethod,
+		),
+	)
+
+	// Attachment Endpoints
+	r.HandleFunc(
+		iimpserver.UploadAttachmentRequestRoutePath,
+		withMethod(
+			UploadAttachment,
+			iimpserver.UploadAttachmentRequestHTTPMethod,
+		),
+	)
+
+	r.HandleFunc(
+		iimpserver.DownloadAttachmentRequestRoutePath,
+		withMethod(
+			DownloadAttachment,
+			iimpserver.DownloadAttachmentRequestHTTPMethod,
+		),
+	)
+
+	// User events pull endpoint
+	r.HandleFunc(
+		iimpserver.PullUserEventsRequestRoutePath,
+		withMethod(
+			PullUserEvents,
+			iimpserver.PullUserEventsRequestHTTPMethod,
+		),
+	)
 }
 
 func withMethod(handler http.HandlerFunc, allowedMethod string) http.HandlerFunc {

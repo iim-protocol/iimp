@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	dbmodels "github.com/iim-protocol/iimp/sdk/db-models"
 	"github.com/iim-protocol/iimp/server/db"
 	"github.com/iim-protocol/iimp/server/iimpserver"
 	"github.com/iim-protocol/iimp/server/logger"
@@ -30,6 +31,18 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	isValidUserId, err := utils.DoesUserIdBelongToThisServer(req.Body.UserId)
+	if err != nil {
+		logger.Error.Println("error validating user ID format for SignUp request:", err)
+		iimpserver.WriteSignUp400Response(w, iimpserver.SignUp400Response{})
+		return
+	}
+
+	if !isValidUserId {
+		iimpserver.WriteSignUp403Response(w, iimpserver.SignUp403Response{})
+		return
+	}
+
 	hashedPassword, err := utils.HashPassword(req.Body.Password)
 	if err != nil {
 		logger.Error.Println("error hashing password for SignUp request:", err)
@@ -37,7 +50,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = db.DB.Collection(db.UsersCollection).InsertOne(r.Context(), db.User{
+	_, err = db.DB.Collection(dbmodels.UsersCollection).InsertOne(r.Context(), dbmodels.User{
 		UserId:       req.Body.UserId,
 		Email:        req.Body.Email,
 		DisplayName:  req.Body.DisplayName,

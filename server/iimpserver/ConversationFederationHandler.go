@@ -24,7 +24,7 @@ type ConversationFederationRequest struct {
 
 type ConversationFederationRequestBody struct {
 
-	// A unique identifier for the conversation, typically a UUIDv7.
+	// A unique identifier for the conversation.
 	//
 	// Required
 	//
@@ -51,6 +51,12 @@ type ConversationFederationRequestBody struct {
 	// Must be non-empty
 	CreatedAt string `json:"CreatedAt"`
 
+	// A flag indicating whether the conversation is a Direct Message (DM) or a Group Conversation. A Direct Message conversation has exactly 2 participants (including the owner), while a Group Conversation has more than 2 participants.
+	//
+	// Required
+	//
+	IsDM bool `json:"IsDM"`
+
 	// A list of participants in the conversation. The owner of the conversation is also included in this list. Participants can be added or removed by the owner user. Contains at least 2 participants (including the owner) for a Direct Conversation and >2 participants for a Group Conversation.
 	//
 	// Required
@@ -60,13 +66,6 @@ type ConversationFederationRequestBody struct {
 }
 
 type ConversationFederationRequestBodyParticipantsItem struct {
-
-	// The unique identifier of the conversation that the participant is part of. This is typically a UUIDv7.
-	//
-	// Required
-	//
-	// Must be non-empty
-	ConversationId string `json:"ConversationId"`
 
 	// The timestamp when the participant joined the conversation. Format => RFC3339.
 	//
@@ -190,6 +189,22 @@ func NewConversationFederationRequestBody(data map[string]any) (ConversationFede
 
 	}
 
+	valIsDM, ok := data["IsDM"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'IsDM'")
+
+	} else {
+
+		valIsDMTyped, ok := valIsDM.(bool)
+		if !ok {
+			return body, fmt.Errorf("field 'IsDM' has incorrect type")
+		}
+
+		body.IsDM = valIsDMTyped
+
+	}
+
 	valParticipants, ok := data["Participants"]
 	if !ok {
 
@@ -229,27 +244,6 @@ func NewConversationFederationRequestBody(data map[string]any) (ConversationFede
 
 func NewConversationFederationRequestBodyParticipantsItem(data map[string]any) (ConversationFederationRequestBodyParticipantsItem, error) {
 	var body ConversationFederationRequestBodyParticipantsItem
-
-	valConversationId, ok := data["ConversationId"]
-	if !ok {
-
-		return body, fmt.Errorf("missing required field 'ConversationId'")
-
-	} else {
-
-		valConversationIdTyped, ok := valConversationId.(string)
-		if !ok {
-			return body, fmt.Errorf("field 'ConversationId' has incorrect type")
-		}
-
-		valConversationIdTyped = strings.TrimSpace(valConversationIdTyped)
-		if len(valConversationIdTyped) == 0 {
-			return body, fmt.Errorf("field 'ConversationId' must be non-empty")
-		}
-
-		body.ConversationId = valConversationIdTyped
-
-	}
 
 	valJoinedAt, ok := data["JoinedAt"]
 	if !ok {

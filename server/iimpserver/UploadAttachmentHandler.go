@@ -8,18 +8,20 @@ import (
 )
 
 const (
-	UploadAttachmentRequestHTTPMethod = "PUT"
-	UploadAttachmentRequestRoutePath  = "/iimp/api/client/attachments/{attachmentId}/bytes"
+	UploadAttachmentRequestHTTPMethod = "POST"
+	UploadAttachmentRequestRoutePath  = "/iimp/api/client/attachments"
 )
 
 // Upload the bytes of an attachment. The bytes go in the request body.
 type UploadAttachmentRequest struct {
 
-	// Source: path parameter "{attachmentId}"
+	// Source: header parameter "X-IIMP-Attachment-Filename"
 	//
 
+	// The original filename of the attachment.
+	//
 	// Required
-	AttachmentId string
+	Filename string
 
 	// Authentication parameters
 	Auth UploadAttachmentRequestAuthParams
@@ -40,12 +42,12 @@ type UploadAttachmentRequestAuthParams struct {
 // NewUploadAttachmentRequest creates a new UploadAttachmentRequest from an http.Request and performs parameter parsing and validation.
 func NewUploadAttachmentRequest(w http.ResponseWriter, r *http.Request) (req UploadAttachmentRequest, err error) {
 
-	valAttachmentId, err := parsestringParam(r.PathValue("attachmentId"), "path: attachmentId", true)
+	valFilename, err := parsestringParam(r.Header.Get("X-IIMP-Attachment-Filename"), "header: X-IIMP-Attachment-Filename", true)
 	if err != nil {
 		return
 	}
 
-	req.AttachmentId = *valAttachmentId
+	req.Filename = *valFilename
 
 	valAuthorization := r.Header.Get("Authorization")
 	valAuthorization = strings.TrimSpace(valAuthorization)
@@ -66,19 +68,37 @@ func NewUploadAttachmentRequest(w http.ResponseWriter, r *http.Request) (req Upl
 	return
 }
 
-type UploadAttachment204Response struct {
+type UploadAttachment201Response struct {
+
+	// Response body
+	Body UploadAttachment201ResponseBody
+}
+
+type UploadAttachment201ResponseBody struct {
+
+	// A unique identifier for the file, which should be added to the new message payload to reference the file in messages.
+	//
+	// Required
+	//
+	// Must be non-empty
+	FileId string `json:"FileId"`
 }
 
 // Attachment uploaded successfully.
 //
 // This function WILL CALL w.WriteHeader(), so ensure that no other calls to
 // w.WriteHeader() are made before calling this function.
-func WriteUploadAttachment204Response(w http.ResponseWriter, response UploadAttachment204Response) error {
+func WriteUploadAttachment201Response(w http.ResponseWriter, response UploadAttachment201Response) error {
 	// Set headers, if any
 
+	// Set Content-Type
+	w.Header().Set("Content-Type", "application/json")
+
 	// Set status code and write the header
-	w.WriteHeader(204)
-	return nil
+	w.WriteHeader(201)
+
+	// Write body
+	return json.NewEncoder(w).Encode(response.Body)
 
 }
 
@@ -146,52 +166,19 @@ func WriteUploadAttachment404Response(w http.ResponseWriter, response UploadAtta
 
 }
 
-type UploadAttachment409Response struct {
-}
-
-// Conflict. The attachment bytes have already been uploaded for the specified AttachmentId.
-//
-// This function WILL CALL w.WriteHeader(), so ensure that no other calls to
-// w.WriteHeader() are made before calling this function.
-func WriteUploadAttachment409Response(w http.ResponseWriter, response UploadAttachment409Response) error {
-	// Set headers, if any
-
-	// Set status code and write the header
-	w.WriteHeader(409)
-	return nil
-
-}
-
 type UploadAttachment413Response struct {
-
-	// Response body
-	Body UploadAttachment413ResponseBody
 }
 
-type UploadAttachment413ResponseBody struct {
-
-	// The total size of the attachment specified during creation in bytes.
-	//
-	// Required
-	//
-	AttachmentSize float64 `json:"AttachmentSize"`
-}
-
-// Payload too large. The upload exceeds the allowed size for the attachment OR the attachment is too large (This size limit is set by the protocol at 1000MB).
+// Payload too large. The specified size exceeds the allowed maximum attachment size. This size limit is set by the protocol at 1000MB.
 //
 // This function WILL CALL w.WriteHeader(), so ensure that no other calls to
 // w.WriteHeader() are made before calling this function.
 func WriteUploadAttachment413Response(w http.ResponseWriter, response UploadAttachment413Response) error {
 	// Set headers, if any
 
-	// Set Content-Type
-	w.Header().Set("Content-Type", "application/json")
-
 	// Set status code and write the header
 	w.WriteHeader(413)
-
-	// Write body
-	return json.NewEncoder(w).Encode(response.Body)
+	return nil
 
 }
 

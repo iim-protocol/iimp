@@ -155,13 +155,6 @@ type NewConversation201Response struct {
 
 type NewConversation201ResponseBodyConversationParticipantsItem struct {
 
-	// The unique identifier of the conversation that the participant is part of. This is typically a UUIDv7.
-	//
-	// Required
-	//
-	// Must be non-empty
-	ConversationId string `json:"ConversationId"`
-
 	// The timestamp when the participant joined the conversation. Format => RFC3339.
 	//
 	// Required
@@ -192,7 +185,7 @@ type NewConversation201ResponseBodyConversationParticipantsItem struct {
 
 type NewConversation201ResponseBodyConversation struct {
 
-	// A unique identifier for the conversation, typically a UUIDv7.
+	// A unique identifier for the conversation.
 	//
 	// Required
 	//
@@ -219,6 +212,12 @@ type NewConversation201ResponseBodyConversation struct {
 	// Must be non-empty
 	CreatedAt string `json:"CreatedAt"`
 
+	// A flag indicating whether the conversation is a Direct Message (DM) or a Group Conversation. A Direct Message conversation has exactly 2 participants (including the owner), while a Group Conversation has more than 2 participants.
+	//
+	// Required
+	//
+	IsDM bool `json:"IsDM"`
+
 	// A list of participants in the conversation. The owner of the conversation is also included in this list. Participants can be added or removed by the owner user. Contains at least 2 participants (including the owner) for a Direct Conversation and >2 participants for a Group Conversation.
 	//
 	// Required
@@ -231,9 +230,9 @@ type NewConversation201ResponseBody struct {
 
 	// Details of the created conversation.
 	//
-	// Optional
+	// Required
 	//
-	Conversation *NewConversation201ResponseBodyConversation `json:"Conversation,omitempty"`
+	Conversation NewConversation201ResponseBodyConversation `json:"Conversation"`
 }
 
 // Conversation created successfully.

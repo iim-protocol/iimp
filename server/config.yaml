@@ -1,0 +1,21 @@
+host: localhost
+port: 5010
+
+domain: https://org1.iimp.social
+# serverTimeout: 15 # Default
+mongoUriFile: ./mongoUriFile.txt
+mongoDBName: org1-iimp
+
+# tls: # optional
+
+jwtPrivateKeyPath: ./jwtPrivateKey
+jwtPublicKeyPath: ./jwtPublicKey
+
+# jwtExpirationSeconds: 3600 # Default
+# jwtClockSkewSeconds: 30 # Default
+# jwtServerTokenExpirationSeconds: 60 # Default
+# sessionExpiry: 2592000 # 30 days in seconds, Default
+signUpDomains:
+  - gmail.com
+
+# passwordBCryptCost: 12 # Default

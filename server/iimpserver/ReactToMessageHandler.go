@@ -18,7 +18,7 @@ type ReactToMessageRequest struct {
 	// Source: path parameter "{conversationId}"
 	//
 
-	// The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+	// The unique identifier of the conversation that the message belongs to.
 	//
 	// Required
 	ConversationId string
@@ -26,7 +26,7 @@ type ReactToMessageRequest struct {
 	// Source: path parameter "{messageId}"
 	//
 
-	// The unique identifier of the message to react to. This is typically a UUIDv7.
+	// The unique identifier of the message to react to.
 	//
 	// Required
 	MessageId string

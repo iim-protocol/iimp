@@ -36,7 +36,7 @@ type MessageFederationRequestBody struct {
 	//
 	// Optional
 	//
-	Attachments []string `json:"Attachments,omitempty"`
+	Attachments []MessageFederationRequestBodyAttachmentsItem `json:"Attachments,omitempty"`
 
 	// A list of message contents for the message, ordered by their version in Ascending Order. The original message sent by the client will have version 1. Each time the message is edited, a new MessageContent object is added to this list with the version number incremented by 1. This allows the server and clients to maintain a history of edits for each message, enabling features such as edit history viewing and audit trails.
 	//
@@ -45,7 +45,7 @@ type MessageFederationRequestBody struct {
 	// Must be non-empty
 	Contents []MessageFederationRequestBodyContentsItem `json:"Contents"`
 
-	// The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+	// The unique identifier of the conversation that the message belongs to.
 	//
 	// Required
 	//
@@ -58,7 +58,7 @@ type MessageFederationRequestBody struct {
 	//
 	IsRedacted bool `json:"IsRedacted"`
 
-	// A unique identifier for the message, typically a UUIDv7.
+	// A unique identifier for the message.
 	//
 	// Required
 	//
@@ -87,6 +87,43 @@ type MessageFederationRequestBody struct {
 	UserSpecificData []MessageFederationRequestBodyUserSpecificDataItem `json:"UserSpecificData"`
 }
 
+type MessageFederationRequestBodyAttachmentsItem struct {
+
+	// The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
+	//
+	// Required
+	//
+	// Must be non-empty
+	ContentType string `json:"ContentType"`
+
+	// A hash of the attachment file content (SHA-256 hash) used for integrity verification. The server can use this hash to verify that the attachment file has not been tampered with during storage or transmission.
+	//
+	// Required
+	//
+	// Must be non-empty
+	FileHash string `json:"FileHash"`
+
+	// A unique identifier for the attachment. Sender's server generates this ID when the attachment is uploaded and returns it to the sender client, which then includes it in the message payload when sending a message with attachments. The server will store the attachment and deliver it to the recipients along with the message content.
+	//
+	// Required
+	//
+	// Must be non-empty
+	FileId string `json:"FileId"`
+
+	// The original filename of the attachment.
+	//
+	// Required
+	//
+	// Must be non-empty
+	Filename string `json:"Filename"`
+
+	// The size of the attachment in bytes. The server may enforce a maximum attachment size (1000MB) and reject attachments that exceed this limit.
+	//
+	// Required
+	//
+	Size float64 `json:"Size"`
+}
+
 type MessageFederationRequestBodyContentsItem struct {
 
 	// Required
@@ -109,7 +146,7 @@ type MessageFederationRequestBodyContentsItemMessageContent struct {
 	// Must be non-empty
 	Content string `json:"Content"`
 
-	// Encryption details for the recipients of the message.
+	// Encryption details for the recipients of the message. The sender client should not include details for participants of a convo where RemovedAt != nil.
 	//
 	// Required
 	//
@@ -233,20 +270,18 @@ func NewMessageFederationRequestBody(data map[string]any) (MessageFederationRequ
 			return body, fmt.Errorf("field 'Attachments' has incorrect type")
 		}
 
-		valAttachmentsTyped := make([]string, 0, len(valAttachmentsSlice))
+		valAttachmentsTyped := make([]MessageFederationRequestBodyAttachmentsItem, 0, len(valAttachmentsSlice))
 
 		for idx, item := range valAttachmentsSlice {
-			itemTyped, ok := item.(string)
+			itemMap, ok := item.(map[string]any)
 			if !ok {
 				return body, fmt.Errorf("element %d of field 'Attachments' has incorrect type", idx)
 			}
-
-			itemTyped = strings.TrimSpace(itemTyped)
-			if itemTyped == "" {
-				return body, fmt.Errorf("element %d of field 'Attachments' must be non-empty", idx)
+			validatedItem, err := NewMessageFederationRequestBodyAttachmentsItem(itemMap)
+			if err != nil {
+				return body, fmt.Errorf("element %d of field 'Attachments' is invalid: %w", idx, err)
 			}
-
-			valAttachmentsTyped = append(valAttachmentsTyped, itemTyped)
+			valAttachmentsTyped = append(valAttachmentsTyped, validatedItem)
 		}
 
 		body.Attachments = valAttachmentsTyped
@@ -418,6 +453,112 @@ func NewMessageFederationRequestBody(data map[string]any) (MessageFederationRequ
 		}
 
 		body.UserSpecificData = valUserSpecificDataTyped
+
+	}
+
+	return body, nil
+}
+
+func NewMessageFederationRequestBodyAttachmentsItem(data map[string]any) (MessageFederationRequestBodyAttachmentsItem, error) {
+	var body MessageFederationRequestBodyAttachmentsItem
+
+	valContentType, ok := data["ContentType"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'ContentType'")
+
+	} else {
+
+		valContentTypeTyped, ok := valContentType.(string)
+		if !ok {
+			return body, fmt.Errorf("field 'ContentType' has incorrect type")
+		}
+
+		valContentTypeTyped = strings.TrimSpace(valContentTypeTyped)
+		if len(valContentTypeTyped) == 0 {
+			return body, fmt.Errorf("field 'ContentType' must be non-empty")
+		}
+
+		body.ContentType = valContentTypeTyped
+
+	}
+
+	valFileHash, ok := data["FileHash"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'FileHash'")
+
+	} else {
+
+		valFileHashTyped, ok := valFileHash.(string)
+		if !ok {
+			return body, fmt.Errorf("field 'FileHash' has incorrect type")
+		}
+
+		valFileHashTyped = strings.TrimSpace(valFileHashTyped)
+		if len(valFileHashTyped) == 0 {
+			return body, fmt.Errorf("field 'FileHash' must be non-empty")
+		}
+
+		body.FileHash = valFileHashTyped
+
+	}
+
+	valFileId, ok := data["FileId"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'FileId'")
+
+	} else {
+
+		valFileIdTyped, ok := valFileId.(string)
+		if !ok {
+			return body, fmt.Errorf("field 'FileId' has incorrect type")
+		}
+
+		valFileIdTyped = strings.TrimSpace(valFileIdTyped)
+		if len(valFileIdTyped) == 0 {
+			return body, fmt.Errorf("field 'FileId' must be non-empty")
+		}
+
+		body.FileId = valFileIdTyped
+
+	}
+
+	valFilename, ok := data["Filename"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'Filename'")
+
+	} else {
+
+		valFilenameTyped, ok := valFilename.(string)
+		if !ok {
+			return body, fmt.Errorf("field 'Filename' has incorrect type")
+		}
+
+		valFilenameTyped = strings.TrimSpace(valFilenameTyped)
+		if len(valFilenameTyped) == 0 {
+			return body, fmt.Errorf("field 'Filename' must be non-empty")
+		}
+
+		body.Filename = valFilenameTyped
+
+	}
+
+	valSize, ok := data["Size"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'Size'")
+
+	} else {
+
+		valSizeTyped, ok := valSize.(float64)
+		if !ok {
+			return body, fmt.Errorf("field 'Size' has incorrect type")
+		}
+
+		body.Size = valSizeTyped
 
 	}
 

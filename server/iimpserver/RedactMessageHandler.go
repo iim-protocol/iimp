@@ -17,7 +17,7 @@ type RedactMessageRequest struct {
 	// Source: path parameter "{conversationId}"
 	//
 
-	// The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+	// The unique identifier of the conversation that the message belongs to.
 	//
 	// Required
 	ConversationId string
@@ -25,7 +25,7 @@ type RedactMessageRequest struct {
 	// Source: path parameter "{messageId}"
 	//
 
-	// The unique identifier of the message to redact. This is typically a UUIDv7.
+	// The unique identifier of the message to redact.
 	//
 	// Required
 	MessageId string

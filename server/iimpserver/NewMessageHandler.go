@@ -18,7 +18,7 @@ type NewMessageRequest struct {
 	// Source: path parameter "{conversationId}"
 	//
 
-	// The unique identifier of the conversation to send the message in. This is typically a UUIDv7.
+	// The unique identifier of the conversation to send the message in.
 	//
 	// Required
 	ConversationId string
@@ -36,13 +36,50 @@ type NewMessageRequestBody struct {
 	//
 	// Optional
 	//
-	Attachments []string `json:"Attachments,omitempty"`
+	Attachments []NewMessageRequestBodyAttachmentsItem `json:"Attachments,omitempty"`
 
 	// The content of the message to be sent in the conversation. The content should be encrypted using an AES key, and the AES key should be encrypted for each recipient using their respective public keys. The server will store the encrypted message content and the encrypted keys for each recipient, allowing the recipients to decrypt the AES key using their private keys and then use it to decrypt the message content.
 	//
 	// Required
 	//
 	MessageContent NewMessageRequestBodyMessageContent `json:"MessageContent"`
+}
+
+type NewMessageRequestBodyAttachmentsItem struct {
+
+	// The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
+	//
+	// Required
+	//
+	// Must be non-empty
+	ContentType string `json:"ContentType"`
+
+	// A hash of the attachment file content (SHA-256 hash) used for integrity verification. The server can use this hash to verify that the attachment file has not been tampered with during storage or transmission.
+	//
+	// Required
+	//
+	// Must be non-empty
+	FileHash string `json:"FileHash"`
+
+	// A unique identifier for the attachment. Sender's server generates this ID when the attachment is uploaded and returns it to the sender client, which then includes it in the message payload when sending a message with attachments. The server will store the attachment and deliver it to the recipients along with the message content.
+	//
+	// Required
+	//
+	// Must be non-empty
+	FileId string `json:"FileId"`
+
+	// The original filename of the attachment.
+	//
+	// Required
+	//
+	// Must be non-empty
+	Filename string `json:"Filename"`
+
+	// The size of the attachment in bytes. The server may enforce a maximum attachment size (1000MB) and reject attachments that exceed this limit.
+	//
+	// Required
+	//
+	Size float64 `json:"Size"`
 }
 
 type NewMessageRequestBodyMessageContent struct {
@@ -54,7 +91,7 @@ type NewMessageRequestBodyMessageContent struct {
 	// Must be non-empty
 	Content string `json:"Content"`
 
-	// Encryption details for the recipients of the message.
+	// Encryption details for the recipients of the message. The sender client should not include details for participants of a convo where RemovedAt != nil.
 	//
 	// Required
 	//
@@ -150,20 +187,18 @@ func NewNewMessageRequestBody(data map[string]any) (NewMessageRequestBody, error
 			return body, fmt.Errorf("field 'Attachments' has incorrect type")
 		}
 
-		valAttachmentsTyped := make([]string, 0, len(valAttachmentsSlice))
+		valAttachmentsTyped := make([]NewMessageRequestBodyAttachmentsItem, 0, len(valAttachmentsSlice))
 
 		for idx, item := range valAttachmentsSlice {
-			itemTyped, ok := item.(string)
+			itemMap, ok := item.(map[string]any)
 			if !ok {
 				return body, fmt.Errorf("element %d of field 'Attachments' has incorrect type", idx)
 			}
-
-			itemTyped = strings.TrimSpace(itemTyped)
-			if itemTyped == "" {
-				return body, fmt.Errorf("element %d of field 'Attachments' must be non-empty", idx)
+			validatedItem, err := NewNewMessageRequestBodyAttachmentsItem(itemMap)
+			if err != nil {
+				return body, fmt.Errorf("element %d of field 'Attachments' is invalid: %w", idx, err)
 			}
-
-			valAttachmentsTyped = append(valAttachmentsTyped, itemTyped)
+			valAttachmentsTyped = append(valAttachmentsTyped, validatedItem)
 		}
 
 		body.Attachments = valAttachmentsTyped
@@ -187,6 +222,112 @@ func NewNewMessageRequestBody(data map[string]any) (NewMessageRequestBody, error
 		}
 
 		body.MessageContent = valMessageContentTyped
+
+	}
+
+	return body, nil
+}
+
+func NewNewMessageRequestBodyAttachmentsItem(data map[string]any) (NewMessageRequestBodyAttachmentsItem, error) {
+	var body NewMessageRequestBodyAttachmentsItem
+
+	valContentType, ok := data["ContentType"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'ContentType'")
+
+	} else {
+
+		valContentTypeTyped, ok := valContentType.(string)
+		if !ok {
+			return body, fmt.Errorf("field 'ContentType' has incorrect type")
+		}
+
+		valContentTypeTyped = strings.TrimSpace(valContentTypeTyped)
+		if len(valContentTypeTyped) == 0 {
+			return body, fmt.Errorf("field 'ContentType' must be non-empty")
+		}
+
+		body.ContentType = valContentTypeTyped
+
+	}
+
+	valFileHash, ok := data["FileHash"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'FileHash'")
+
+	} else {
+
+		valFileHashTyped, ok := valFileHash.(string)
+		if !ok {
+			return body, fmt.Errorf("field 'FileHash' has incorrect type")
+		}
+
+		valFileHashTyped = strings.TrimSpace(valFileHashTyped)
+		if len(valFileHashTyped) == 0 {
+			return body, fmt.Errorf("field 'FileHash' must be non-empty")
+		}
+
+		body.FileHash = valFileHashTyped
+
+	}
+
+	valFileId, ok := data["FileId"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'FileId'")
+
+	} else {
+
+		valFileIdTyped, ok := valFileId.(string)
+		if !ok {
+			return body, fmt.Errorf("field 'FileId' has incorrect type")
+		}
+
+		valFileIdTyped = strings.TrimSpace(valFileIdTyped)
+		if len(valFileIdTyped) == 0 {
+			return body, fmt.Errorf("field 'FileId' must be non-empty")
+		}
+
+		body.FileId = valFileIdTyped
+
+	}
+
+	valFilename, ok := data["Filename"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'Filename'")
+
+	} else {
+
+		valFilenameTyped, ok := valFilename.(string)
+		if !ok {
+			return body, fmt.Errorf("field 'Filename' has incorrect type")
+		}
+
+		valFilenameTyped = strings.TrimSpace(valFilenameTyped)
+		if len(valFilenameTyped) == 0 {
+			return body, fmt.Errorf("field 'Filename' must be non-empty")
+		}
+
+		body.Filename = valFilenameTyped
+
+	}
+
+	valSize, ok := data["Size"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'Size'")
+
+	} else {
+
+		valSizeTyped, ok := valSize.(float64)
+		if !ok {
+			return body, fmt.Errorf("field 'Size' has incorrect type")
+		}
+
+		body.Size = valSizeTyped
 
 	}
 
@@ -480,19 +621,6 @@ func NewNewMessageRequest(w http.ResponseWriter, r *http.Request) (req NewMessag
 }
 
 type NewMessage201Response struct {
-
-	// Response body
-	Body NewMessage201ResponseBody
-}
-
-type NewMessage201ResponseBody struct {
-
-	// A unique identifier for the message, typically a UUIDv7.
-	//
-	// Required
-	//
-	// Must be non-empty
-	MessageId string `json:"MessageId"`
 }
 
 // Message sent successfully.
@@ -502,14 +630,9 @@ type NewMessage201ResponseBody struct {
 func WriteNewMessage201Response(w http.ResponseWriter, response NewMessage201Response) error {
 	// Set headers, if any
 
-	// Set Content-Type
-	w.Header().Set("Content-Type", "application/json")
-
 	// Set status code and write the header
 	w.WriteHeader(201)
-
-	// Write body
-	return json.NewEncoder(w).Encode(response.Body)
+	return nil
 
 }
 

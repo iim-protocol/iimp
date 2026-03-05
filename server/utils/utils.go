@@ -3,13 +3,14 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
 
+	dbmodels "github.com/iim-protocol/iimp/sdk/db-models"
 	"github.com/iim-protocol/iimp/server/auth"
 	"github.com/iim-protocol/iimp/server/config"
-	"github.com/iim-protocol/iimp/server/db"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -54,8 +55,31 @@ func ExtractDomainFromEmailId(emailId string) (string, error) {
 	return parts[1], nil
 }
 
+func DoesUserIdBelongToThisServer(userId string) (bool, error) {
+	domain, err := ExtractDomainFromUserId(userId)
+	if err != nil {
+		return false, err
+	}
+
+	u, err := url.Parse(config.C.Domain)
+	if err != nil {
+		return false, fmt.Errorf("error parsing server domain from config: %w", err)
+	}
+	serverDomain := u.Hostname()
+
+	if domain != serverDomain {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func ExtractDomainFromUserId(userId string) (string, error) {
+	return ExtractDomainFromEmailId(userId)
+}
+
 type CreateSessionResult struct {
-	Session            db.Session
+	Session            dbmodels.Session
 	SessionToken       string
 	SessionTokenExpiry time.Time
 	RefreshToken       string
@@ -74,7 +98,7 @@ func CreateSession(userId string) (CreateSessionResult, error) {
 
 	sessionExpiry := time.Now().Add(time.Duration(config.C.SessionExpiry) * time.Second)
 
-	session := db.Session{
+	session := dbmodels.Session{
 		UserId: userId,
 		// Set other session fields as needed
 		RefreshTokenHash: auth.HashRefreshToken(refreshToken),

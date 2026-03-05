@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/MicahParks/jwkset"
@@ -117,7 +118,7 @@ func GenerateSessionToken(userId string) (sessionToken, jti string, expiresAt ti
 			ID:        jti,
 			Issuer:    issuer,
 			Subject:   userId,
-			Audience:  jwt.ClaimStrings{issuer}, // set audience to the issuer since this token is only intended for the server itself
+			Audience:  jwt.ClaimStrings{"iimp-server"}, // set audience to "iimp-server" as a convention to indicate that this token is intended for any iimp-compatible server
 			IssuedAt:  jwt.NewNumericDate(issuedAt),
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			NotBefore: jwt.NewNumericDate(notBefore),
@@ -134,7 +135,42 @@ func GenerateSessionToken(userId string) (sessionToken, jti string, expiresAt ti
 	return signedToken, jti, expiresAt, nil
 }
 
-func ValidateSessionToken(tokenString string) (*SessionClaims, error) {
+func ValidateSessionToken(ctx context.Context, tokenString string) (*SessionClaims, error) {
+	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+	unverified, _, err := jwt.NewParser().ParseUnverified(tokenString, &SessionClaims{})
+	if err != nil {
+		return nil, fmt.Errorf("error parsing token: %w", err)
+	}
+
+	issuer, err := unverified.Claims.GetIssuer()
+	if err != nil {
+		return nil, fmt.Errorf("error getting issuer from token claims: %w", err)
+	}
+
+	if issuer == config.C.Domain {
+		// Token is intended for this server, validate with local public key
+		return validateSessionTokenLocal(tokenString)
+	} else {
+		// proceed to jwks verification since token is issued by a different server
+		jwksURL := fmt.Sprintf("%s%s", issuer, iimpserver.GetJWKSStoreRequestRoutePath)
+		jwks, err := keyfunc.NewDefaultCtx(ctx, []string{jwksURL})
+		if err != nil {
+			return nil, fmt.Errorf("error creating JWKS from URL: %w", err)
+		}
+
+		token, err := jwt.ParseWithClaims(tokenString, &SessionClaims{}, jwks.Keyfunc)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing token with JWKS keyfunc: %w", err)
+		}
+
+		if claims, ok := token.Claims.(*SessionClaims); ok && token.Valid {
+			return claims, nil
+		}
+		return nil, fmt.Errorf("invalid token")
+	}
+}
+
+func validateSessionTokenLocal(tokenString string) (*SessionClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &SessionClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -186,6 +222,7 @@ func GenerateServerToken(audience string) (string, error) {
 }
 
 func ValidateServerToken(ctx context.Context, tokenString string) (*ServerClaims, error) {
+	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 	unverified, _, err := jwt.NewParser().ParseUnverified(tokenString, &ServerClaims{})
 	if err != nil {
 		return nil, fmt.Errorf("error parsing token: %w", err)

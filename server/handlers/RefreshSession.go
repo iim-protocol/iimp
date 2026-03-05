@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	dbmodels "github.com/iim-protocol/iimp/sdk/db-models"
 	"github.com/iim-protocol/iimp/server/auth"
 	"github.com/iim-protocol/iimp/server/db"
 	"github.com/iim-protocol/iimp/server/iimpserver"
@@ -24,10 +25,10 @@ func RefreshSession(w http.ResponseWriter, r *http.Request) {
 	refreshTokenHash := auth.HashRefreshToken(req.Body.RefreshToken)
 
 	filters := bson.D{{Key: "refresh_token_hash", Value: refreshTokenHash}}
-	var session db.Session
+	var session dbmodels.Session
 
 	// Get session from database using refresh token hash
-	err = db.DB.Collection(db.SessionsCollection).FindOne(r.Context(), filters).Decode(&session)
+	err = db.DB.Collection(dbmodels.SessionsCollection).FindOne(r.Context(), filters).Decode(&session)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			iimpserver.WriteRefreshSession401Response(w, iimpserver.RefreshSession401Response{})
@@ -59,7 +60,7 @@ func RefreshSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	session.SessionTokenId = sessionTokenId
-	if _, err := db.DB.Collection(db.SessionsCollection).UpdateOne(r.Context(), filters, bson.D{{Key: "$set", Value: bson.D{
+	if _, err := db.DB.Collection(dbmodels.SessionsCollection).UpdateOne(r.Context(), filters, bson.D{{Key: "$set", Value: bson.D{
 		{Key: "session_token_id", Value: sessionTokenId},
 		{Key: "refresh_token_hash", Value: auth.HashRefreshToken(refreshToken)},
 	}}}); err != nil {

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	dbmodels "github.com/iim-protocol/iimp/sdk/db-models"
 	"github.com/iim-protocol/iimp/server/db"
 	"github.com/iim-protocol/iimp/server/iimpserver"
 	"github.com/iim-protocol/iimp/server/logger"
@@ -19,7 +20,7 @@ func GetUserPublicKeyById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var userPublicKey db.UserPublicKey
+	var userPublicKey dbmodels.UserPublicKey
 
 	// Convert KeyId string to ObjectID
 	objectId, err := bson.ObjectIDFromHex(req.KeyId)
@@ -31,7 +32,7 @@ func GetUserPublicKeyById(w http.ResponseWriter, r *http.Request) {
 
 	filter := bson.D{{Key: "_id", Value: objectId}, {Key: "user_id", Value: req.UserId}}
 
-	err = db.DB.Collection(db.UserPublicKeysCollection).FindOne(r.Context(), filter).Decode(&userPublicKey)
+	err = db.DB.Collection(dbmodels.UserPublicKeysCollection).FindOne(r.Context(), filter).Decode(&userPublicKey)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			iimpserver.WriteGetUserPublicKeyById404Response(w, iimpserver.GetUserPublicKeyById404Response{})

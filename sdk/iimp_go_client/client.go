@@ -70,7 +70,7 @@ func (c *IIMP) AddPublicKey(ctx context.Context, params AddPublicKeyRequest) (Ad
 			Err:     err,
 		}
 	}
-	path := "/api/client/keys"
+	path := "/iimp/api/client/keys"
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -204,7 +204,7 @@ func (c *IIMP) ConversationFederation(ctx context.Context, params ConversationFe
 			Err:     err,
 		}
 	}
-	path := "/api/federation/conversations"
+	path := "/iimp/api/federation/conversations"
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -332,6 +332,8 @@ type DiscoverServerResult struct {
 
 	Response200 DiscoverServer200Response
 
+	Response404 DiscoverServer404Response
+
 	Response500 DiscoverServer500Response
 
 	UnknownResponse *UnknownStatusResponse
@@ -388,10 +390,378 @@ func (c *IIMP) DiscoverServer(ctx context.Context, params DiscoverServerRequest)
 		response.Response200 = result
 		return response, nil
 
+	case 404:
+		result, err := NewDiscoverServer404Response(resp)
+		if err != nil {
+			return DiscoverServerResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response404 = result
+		return response, nil
+
 	case 500:
 		result, err := NewDiscoverServer500Response(resp)
 		if err != nil {
 			return DiscoverServerResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response500 = result
+		return response, nil
+
+	default:
+		response.UnknownResponse = &UnknownStatusResponse{
+			StatusCode: resp.StatusCode,
+			Response:   resp,
+		}
+		return response, nil
+	}
+}
+
+type DownloadAttachmentResult struct {
+	StatusCode int
+
+	Response200 DownloadAttachment200Response
+
+	Response400 DownloadAttachment400Response
+
+	Response401 DownloadAttachment401Response
+
+	Response403 DownloadAttachment403Response
+
+	Response404 DownloadAttachment404Response
+
+	Response500 DownloadAttachment500Response
+
+	UnknownResponse *UnknownStatusResponse
+}
+
+func (c *IIMP) DownloadAttachment(ctx context.Context, params DownloadAttachmentRequest) (DownloadAttachmentResult, error) {
+	if err := params.Validate(); err != nil {
+		return DownloadAttachmentResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid request parameters",
+			Err:     err,
+		}
+	}
+
+	path := "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes"
+
+	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
+	if err != nil {
+		return DownloadAttachmentResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid path parameter: conversationId",
+			Err:     err,
+		}
+	}
+	path = strings.ReplaceAll(path, "{conversationId}", fmt.Sprintf("%v", pathParamConversationId))
+
+	pathParamMessageId, err := paramToString(params.MessageId, "path parameter: MessageId", "string", true)
+	if err != nil {
+		return DownloadAttachmentResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid path parameter: messageId",
+			Err:     err,
+		}
+	}
+	path = strings.ReplaceAll(path, "{messageId}", fmt.Sprintf("%v", pathParamMessageId))
+
+	pathParamFileId, err := paramToString(params.FileId, "path parameter: FileId", "string", true)
+	if err != nil {
+		return DownloadAttachmentResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid path parameter: fileId",
+			Err:     err,
+		}
+	}
+	path = strings.ReplaceAll(path, "{fileId}", fmt.Sprintf("%v", pathParamFileId))
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		"GET",
+		c.baseURL+path,
+		nil,
+	)
+	if err != nil {
+		return DownloadAttachmentResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "failed to create HTTP request",
+			Err:     err,
+		}
+	}
+
+	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
+	if err != nil {
+		return DownloadAttachmentResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid auth parameter: Authorization",
+			Err:     err,
+		}
+	}
+	req.Header.Set("Authorization", authAuthorization)
+
+	resp, err := c.do(req)
+	if err != nil {
+		return DownloadAttachmentResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonNetworkError,
+			Message: "network error during HTTP request",
+			Err:     err,
+		}
+	}
+	// resp.Body will be closed in response handlers
+	response := DownloadAttachmentResult{
+		StatusCode: resp.StatusCode,
+	}
+	switch resp.StatusCode {
+
+	case 200:
+		result, err := NewDownloadAttachment200Response(resp)
+		if err != nil {
+			return DownloadAttachmentResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response200 = result
+		return response, nil
+
+	case 400:
+		result, err := NewDownloadAttachment400Response(resp)
+		if err != nil {
+			return DownloadAttachmentResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response400 = result
+		return response, nil
+
+	case 401:
+		result, err := NewDownloadAttachment401Response(resp)
+		if err != nil {
+			return DownloadAttachmentResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response401 = result
+		return response, nil
+
+	case 403:
+		result, err := NewDownloadAttachment403Response(resp)
+		if err != nil {
+			return DownloadAttachmentResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response403 = result
+		return response, nil
+
+	case 404:
+		result, err := NewDownloadAttachment404Response(resp)
+		if err != nil {
+			return DownloadAttachmentResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response404 = result
+		return response, nil
+
+	case 500:
+		result, err := NewDownloadAttachment500Response(resp)
+		if err != nil {
+			return DownloadAttachmentResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response500 = result
+		return response, nil
+
+	default:
+		response.UnknownResponse = &UnknownStatusResponse{
+			StatusCode: resp.StatusCode,
+			Response:   resp,
+		}
+		return response, nil
+	}
+}
+
+type DownloadAttachmentBytesFederationResult struct {
+	StatusCode int
+
+	Response200 DownloadAttachmentBytesFederation200Response
+
+	Response400 DownloadAttachmentBytesFederation400Response
+
+	Response401 DownloadAttachmentBytesFederation401Response
+
+	Response403 DownloadAttachmentBytesFederation403Response
+
+	Response404 DownloadAttachmentBytesFederation404Response
+
+	Response500 DownloadAttachmentBytesFederation500Response
+
+	UnknownResponse *UnknownStatusResponse
+}
+
+func (c *IIMP) DownloadAttachmentBytesFederation(ctx context.Context, params DownloadAttachmentBytesFederationRequest) (DownloadAttachmentBytesFederationResult, error) {
+	if err := params.Validate(); err != nil {
+		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid request parameters",
+			Err:     err,
+		}
+	}
+
+	path := "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes"
+
+	pathParamFileId, err := paramToString(params.FileId, "path parameter: FileId", "string", true)
+	if err != nil {
+		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid path parameter: fileId",
+			Err:     err,
+		}
+	}
+	path = strings.ReplaceAll(path, "{fileId}", fmt.Sprintf("%v", pathParamFileId))
+
+	pathParamMessageId, err := paramToString(params.MessageId, "path parameter: MessageId", "string", true)
+	if err != nil {
+		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid path parameter: messageId",
+			Err:     err,
+		}
+	}
+	path = strings.ReplaceAll(path, "{messageId}", fmt.Sprintf("%v", pathParamMessageId))
+
+	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
+	if err != nil {
+		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid path parameter: conversationId",
+			Err:     err,
+		}
+	}
+	path = strings.ReplaceAll(path, "{conversationId}", fmt.Sprintf("%v", pathParamConversationId))
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		"GET",
+		c.baseURL+path,
+		nil,
+	)
+	if err != nil {
+		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "failed to create HTTP request",
+			Err:     err,
+		}
+	}
+
+	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
+	if err != nil {
+		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid auth parameter: Authorization",
+			Err:     err,
+		}
+	}
+	req.Header.Set("Authorization", authAuthorization)
+
+	resp, err := c.do(req)
+	if err != nil {
+		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonNetworkError,
+			Message: "network error during HTTP request",
+			Err:     err,
+		}
+	}
+	// resp.Body will be closed in response handlers
+	response := DownloadAttachmentBytesFederationResult{
+		StatusCode: resp.StatusCode,
+	}
+	switch resp.StatusCode {
+
+	case 200:
+		result, err := NewDownloadAttachmentBytesFederation200Response(resp)
+		if err != nil {
+			return DownloadAttachmentBytesFederationResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response200 = result
+		return response, nil
+
+	case 400:
+		result, err := NewDownloadAttachmentBytesFederation400Response(resp)
+		if err != nil {
+			return DownloadAttachmentBytesFederationResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response400 = result
+		return response, nil
+
+	case 401:
+		result, err := NewDownloadAttachmentBytesFederation401Response(resp)
+		if err != nil {
+			return DownloadAttachmentBytesFederationResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response401 = result
+		return response, nil
+
+	case 403:
+		result, err := NewDownloadAttachmentBytesFederation403Response(resp)
+		if err != nil {
+			return DownloadAttachmentBytesFederationResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response403 = result
+		return response, nil
+
+	case 404:
+		result, err := NewDownloadAttachmentBytesFederation404Response(resp)
+		if err != nil {
+			return DownloadAttachmentBytesFederationResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response404 = result
+		return response, nil
+
+	case 500:
+		result, err := NewDownloadAttachmentBytesFederation500Response(resp)
+		if err != nil {
+			return DownloadAttachmentBytesFederationResult{}, &IIMPError{
 				Reason:  IIMPErrorReasonDecodeError,
 				Message: "failed to decode response",
 				Err:     err,
@@ -444,7 +814,7 @@ func (c *IIMP) EditMessage(ctx context.Context, params EditMessageRequest) (Edit
 			Err:     err,
 		}
 	}
-	path := "/api/client/conversations/{conversationId}/messages/{messageId}"
+	path := "/iimp/api/client/conversations/{conversationId}/messages/{messageId}"
 
 	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
 	if err != nil {
@@ -587,540 +957,6 @@ func (c *IIMP) EditMessage(ctx context.Context, params EditMessageRequest) (Edit
 	}
 }
 
-type EditMessageForwardFederationResult struct {
-	StatusCode int
-
-	Response200 EditMessageForwardFederation200Response
-
-	Response400 EditMessageForwardFederation400Response
-
-	Response401 EditMessageForwardFederation401Response
-
-	Response403 EditMessageForwardFederation403Response
-
-	Response404 EditMessageForwardFederation404Response
-
-	Response500 EditMessageForwardFederation500Response
-
-	UnknownResponse *UnknownStatusResponse
-}
-
-func (c *IIMP) EditMessageForwardFederation(ctx context.Context, params EditMessageForwardFederationRequest) (EditMessageForwardFederationResult, error) {
-	if err := params.Validate(); err != nil {
-		return EditMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid request parameters",
-			Err:     err,
-		}
-	}
-
-	body, err := json.Marshal(params.Body)
-	if err != nil {
-		return EditMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to serialize request body",
-			Err:     err,
-		}
-	}
-	path := "/api/federation/conversations/{conversationId}/messages/{messageId}/edit/forward"
-
-	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
-	if err != nil {
-		return EditMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: conversationId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{conversationId}", fmt.Sprintf("%v", pathParamConversationId))
-
-	pathParamMessageId, err := paramToString(params.MessageId, "path parameter: MessageId", "string", true)
-	if err != nil {
-		return EditMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: messageId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{messageId}", fmt.Sprintf("%v", pathParamMessageId))
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"PUT",
-		c.baseURL+path,
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		return EditMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to create HTTP request",
-			Err:     err,
-		}
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
-	if err != nil {
-		return EditMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid auth parameter: Authorization",
-			Err:     err,
-		}
-	}
-	req.Header.Set("Authorization", authAuthorization)
-
-	resp, err := c.do(req)
-	if err != nil {
-		return EditMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonNetworkError,
-			Message: "network error during HTTP request",
-			Err:     err,
-		}
-	}
-	// resp.Body will be closed in response handlers
-	response := EditMessageForwardFederationResult{
-		StatusCode: resp.StatusCode,
-	}
-	switch resp.StatusCode {
-
-	case 200:
-		result, err := NewEditMessageForwardFederation200Response(resp)
-		if err != nil {
-			return EditMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response200 = result
-		return response, nil
-
-	case 400:
-		result, err := NewEditMessageForwardFederation400Response(resp)
-		if err != nil {
-			return EditMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response400 = result
-		return response, nil
-
-	case 401:
-		result, err := NewEditMessageForwardFederation401Response(resp)
-		if err != nil {
-			return EditMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response401 = result
-		return response, nil
-
-	case 403:
-		result, err := NewEditMessageForwardFederation403Response(resp)
-		if err != nil {
-			return EditMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response403 = result
-		return response, nil
-
-	case 404:
-		result, err := NewEditMessageForwardFederation404Response(resp)
-		if err != nil {
-			return EditMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response404 = result
-		return response, nil
-
-	case 500:
-		result, err := NewEditMessageForwardFederation500Response(resp)
-		if err != nil {
-			return EditMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response500 = result
-		return response, nil
-
-	default:
-		response.UnknownResponse = &UnknownStatusResponse{
-			StatusCode: resp.StatusCode,
-			Response:   resp,
-		}
-		return response, nil
-	}
-}
-
-type FetchAttachmentBytesResult struct {
-	StatusCode int
-
-	Response200 FetchAttachmentBytes200Response
-
-	Response400 FetchAttachmentBytes400Response
-
-	Response401 FetchAttachmentBytes401Response
-
-	Response403 FetchAttachmentBytes403Response
-
-	Response404 FetchAttachmentBytes404Response
-
-	Response500 FetchAttachmentBytes500Response
-
-	UnknownResponse *UnknownStatusResponse
-}
-
-func (c *IIMP) FetchAttachmentBytes(ctx context.Context, params FetchAttachmentBytesRequest) (FetchAttachmentBytesResult, error) {
-	if err := params.Validate(); err != nil {
-		return FetchAttachmentBytesResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid request parameters",
-			Err:     err,
-		}
-	}
-
-	path := "/api/client/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes"
-
-	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
-	if err != nil {
-		return FetchAttachmentBytesResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: conversationId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{conversationId}", fmt.Sprintf("%v", pathParamConversationId))
-
-	pathParamMessageId, err := paramToString(params.MessageId, "path parameter: MessageId", "string", true)
-	if err != nil {
-		return FetchAttachmentBytesResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: messageId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{messageId}", fmt.Sprintf("%v", pathParamMessageId))
-
-	pathParamAttachmentId, err := paramToString(params.AttachmentId, "path parameter: AttachmentId", "string", true)
-	if err != nil {
-		return FetchAttachmentBytesResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: attachmentId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{attachmentId}", fmt.Sprintf("%v", pathParamAttachmentId))
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"GET",
-		c.baseURL+path,
-		nil,
-	)
-	if err != nil {
-		return FetchAttachmentBytesResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to create HTTP request",
-			Err:     err,
-		}
-	}
-
-	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
-	if err != nil {
-		return FetchAttachmentBytesResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid auth parameter: Authorization",
-			Err:     err,
-		}
-	}
-	req.Header.Set("Authorization", authAuthorization)
-
-	resp, err := c.do(req)
-	if err != nil {
-		return FetchAttachmentBytesResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonNetworkError,
-			Message: "network error during HTTP request",
-			Err:     err,
-		}
-	}
-	// resp.Body will be closed in response handlers
-	response := FetchAttachmentBytesResult{
-		StatusCode: resp.StatusCode,
-	}
-	switch resp.StatusCode {
-
-	case 200:
-		result, err := NewFetchAttachmentBytes200Response(resp)
-		if err != nil {
-			return FetchAttachmentBytesResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response200 = result
-		return response, nil
-
-	case 400:
-		result, err := NewFetchAttachmentBytes400Response(resp)
-		if err != nil {
-			return FetchAttachmentBytesResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response400 = result
-		return response, nil
-
-	case 401:
-		result, err := NewFetchAttachmentBytes401Response(resp)
-		if err != nil {
-			return FetchAttachmentBytesResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response401 = result
-		return response, nil
-
-	case 403:
-		result, err := NewFetchAttachmentBytes403Response(resp)
-		if err != nil {
-			return FetchAttachmentBytesResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response403 = result
-		return response, nil
-
-	case 404:
-		result, err := NewFetchAttachmentBytes404Response(resp)
-		if err != nil {
-			return FetchAttachmentBytesResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response404 = result
-		return response, nil
-
-	case 500:
-		result, err := NewFetchAttachmentBytes500Response(resp)
-		if err != nil {
-			return FetchAttachmentBytesResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response500 = result
-		return response, nil
-
-	default:
-		response.UnknownResponse = &UnknownStatusResponse{
-			StatusCode: resp.StatusCode,
-			Response:   resp,
-		}
-		return response, nil
-	}
-}
-
-type FetchAttachmentBytesFederationResult struct {
-	StatusCode int
-
-	Response200 FetchAttachmentBytesFederation200Response
-
-	Response400 FetchAttachmentBytesFederation400Response
-
-	Response401 FetchAttachmentBytesFederation401Response
-
-	Response403 FetchAttachmentBytesFederation403Response
-
-	Response404 FetchAttachmentBytesFederation404Response
-
-	Response500 FetchAttachmentBytesFederation500Response
-
-	UnknownResponse *UnknownStatusResponse
-}
-
-func (c *IIMP) FetchAttachmentBytesFederation(ctx context.Context, params FetchAttachmentBytesFederationRequest) (FetchAttachmentBytesFederationResult, error) {
-	if err := params.Validate(); err != nil {
-		return FetchAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid request parameters",
-			Err:     err,
-		}
-	}
-
-	path := "/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes"
-
-	pathParamAttachmentId, err := paramToString(params.AttachmentId, "path parameter: AttachmentId", "string", true)
-	if err != nil {
-		return FetchAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: attachmentId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{attachmentId}", fmt.Sprintf("%v", pathParamAttachmentId))
-
-	pathParamMessageId, err := paramToString(params.MessageId, "path parameter: MessageId", "string", true)
-	if err != nil {
-		return FetchAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: messageId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{messageId}", fmt.Sprintf("%v", pathParamMessageId))
-
-	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
-	if err != nil {
-		return FetchAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: conversationId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{conversationId}", fmt.Sprintf("%v", pathParamConversationId))
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"GET",
-		c.baseURL+path,
-		nil,
-	)
-	if err != nil {
-		return FetchAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to create HTTP request",
-			Err:     err,
-		}
-	}
-
-	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
-	if err != nil {
-		return FetchAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid auth parameter: Authorization",
-			Err:     err,
-		}
-	}
-	req.Header.Set("Authorization", authAuthorization)
-
-	resp, err := c.do(req)
-	if err != nil {
-		return FetchAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonNetworkError,
-			Message: "network error during HTTP request",
-			Err:     err,
-		}
-	}
-	// resp.Body will be closed in response handlers
-	response := FetchAttachmentBytesFederationResult{
-		StatusCode: resp.StatusCode,
-	}
-	switch resp.StatusCode {
-
-	case 200:
-		result, err := NewFetchAttachmentBytesFederation200Response(resp)
-		if err != nil {
-			return FetchAttachmentBytesFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response200 = result
-		return response, nil
-
-	case 400:
-		result, err := NewFetchAttachmentBytesFederation400Response(resp)
-		if err != nil {
-			return FetchAttachmentBytesFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response400 = result
-		return response, nil
-
-	case 401:
-		result, err := NewFetchAttachmentBytesFederation401Response(resp)
-		if err != nil {
-			return FetchAttachmentBytesFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response401 = result
-		return response, nil
-
-	case 403:
-		result, err := NewFetchAttachmentBytesFederation403Response(resp)
-		if err != nil {
-			return FetchAttachmentBytesFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response403 = result
-		return response, nil
-
-	case 404:
-		result, err := NewFetchAttachmentBytesFederation404Response(resp)
-		if err != nil {
-			return FetchAttachmentBytesFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response404 = result
-		return response, nil
-
-	case 500:
-		result, err := NewFetchAttachmentBytesFederation500Response(resp)
-		if err != nil {
-			return FetchAttachmentBytesFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response500 = result
-		return response, nil
-
-	default:
-		response.UnknownResponse = &UnknownStatusResponse{
-			StatusCode: resp.StatusCode,
-			Response:   resp,
-		}
-		return response, nil
-	}
-}
-
 type GetJWKSStoreResult struct {
 	StatusCode int
 
@@ -1226,7 +1062,7 @@ func (c *IIMP) GetUserInfoFederation(ctx context.Context, params GetUserInfoFede
 		}
 	}
 
-	path := "/api/federation/users/{userId}"
+	path := "/iimp/api/federation/users/{userId}"
 
 	pathParamUserId, err := paramToString(params.UserId, "path parameter: UserId", "string", true)
 	if err != nil {
@@ -1338,6 +1174,8 @@ type GetUserPublicKeyResult struct {
 
 	Response200 GetUserPublicKey200Response
 
+	Response400 GetUserPublicKey400Response
+
 	Response404 GetUserPublicKey404Response
 
 	Response500 GetUserPublicKey500Response
@@ -1406,6 +1244,18 @@ func (c *IIMP) GetUserPublicKey(ctx context.Context, params GetUserPublicKeyRequ
 		response.Response200 = result
 		return response, nil
 
+	case 400:
+		result, err := NewGetUserPublicKey400Response(resp)
+		if err != nil {
+			return GetUserPublicKeyResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response400 = result
+		return response, nil
+
 	case 404:
 		result, err := NewGetUserPublicKey404Response(resp)
 		if err != nil {
@@ -1443,6 +1293,8 @@ type GetUserPublicKeyByIdResult struct {
 	StatusCode int
 
 	Response200 GetUserPublicKeyById200Response
+
+	Response400 GetUserPublicKeyById400Response
 
 	Response404 GetUserPublicKeyById404Response
 
@@ -1522,6 +1374,18 @@ func (c *IIMP) GetUserPublicKeyById(ctx context.Context, params GetUserPublicKey
 		response.Response200 = result
 		return response, nil
 
+	case 400:
+		result, err := NewGetUserPublicKeyById400Response(resp)
+		if err != nil {
+			return GetUserPublicKeyByIdResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response400 = result
+		return response, nil
+
 	case 404:
 		result, err := NewGetUserPublicKeyById404Response(resp)
 		if err != nil {
@@ -1586,7 +1450,7 @@ func (c *IIMP) Login(ctx context.Context, params LoginRequest) (LoginResult, err
 			Err:     err,
 		}
 	}
-	path := "/api/client/login"
+	path := "/iimp/api/client/login"
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -1680,6 +1544,8 @@ type LogoutResult struct {
 
 	Response204 Logout204Response
 
+	Response400 Logout400Response
+
 	Response401 Logout401Response
 
 	Response500 Logout500Response
@@ -1696,7 +1562,7 @@ func (c *IIMP) Logout(ctx context.Context, params LogoutRequest) (LogoutResult, 
 		}
 	}
 
-	path := "/api/client/logout"
+	path := "/iimp/api/client/logout"
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -1746,6 +1612,18 @@ func (c *IIMP) Logout(ctx context.Context, params LogoutRequest) (LogoutResult, 
 			}
 		}
 		response.Response204 = result
+		return response, nil
+
+	case 400:
+		result, err := NewLogout400Response(resp)
+		if err != nil {
+			return LogoutResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response400 = result
 		return response, nil
 
 	case 401:
@@ -1816,7 +1694,7 @@ func (c *IIMP) MessageFederation(ctx context.Context, params MessageFederationRe
 			Err:     err,
 		}
 	}
-	path := "/api/federation/conversations/{conversationId}/messages"
+	path := "/iimp/api/federation/conversations/{conversationId}/messages"
 
 	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
 	if err != nil {
@@ -1949,318 +1827,6 @@ func (c *IIMP) MessageFederation(ctx context.Context, params MessageFederationRe
 	}
 }
 
-type MessageForwardFederationResult struct {
-	StatusCode int
-
-	Response200 MessageForwardFederation200Response
-
-	Response400 MessageForwardFederation400Response
-
-	Response401 MessageForwardFederation401Response
-
-	Response403 MessageForwardFederation403Response
-
-	Response404 MessageForwardFederation404Response
-
-	Response500 MessageForwardFederation500Response
-
-	UnknownResponse *UnknownStatusResponse
-}
-
-func (c *IIMP) MessageForwardFederation(ctx context.Context, params MessageForwardFederationRequest) (MessageForwardFederationResult, error) {
-	if err := params.Validate(); err != nil {
-		return MessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid request parameters",
-			Err:     err,
-		}
-	}
-
-	body, err := json.Marshal(params.Body)
-	if err != nil {
-		return MessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to serialize request body",
-			Err:     err,
-		}
-	}
-	path := "/api/federation/conversations/{conversationId}/messages/forward"
-
-	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
-	if err != nil {
-		return MessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: conversationId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{conversationId}", fmt.Sprintf("%v", pathParamConversationId))
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		c.baseURL+path,
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		return MessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to create HTTP request",
-			Err:     err,
-		}
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
-	if err != nil {
-		return MessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid auth parameter: Authorization",
-			Err:     err,
-		}
-	}
-	req.Header.Set("Authorization", authAuthorization)
-
-	resp, err := c.do(req)
-	if err != nil {
-		return MessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonNetworkError,
-			Message: "network error during HTTP request",
-			Err:     err,
-		}
-	}
-	// resp.Body will be closed in response handlers
-	response := MessageForwardFederationResult{
-		StatusCode: resp.StatusCode,
-	}
-	switch resp.StatusCode {
-
-	case 200:
-		result, err := NewMessageForwardFederation200Response(resp)
-		if err != nil {
-			return MessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response200 = result
-		return response, nil
-
-	case 400:
-		result, err := NewMessageForwardFederation400Response(resp)
-		if err != nil {
-			return MessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response400 = result
-		return response, nil
-
-	case 401:
-		result, err := NewMessageForwardFederation401Response(resp)
-		if err != nil {
-			return MessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response401 = result
-		return response, nil
-
-	case 403:
-		result, err := NewMessageForwardFederation403Response(resp)
-		if err != nil {
-			return MessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response403 = result
-		return response, nil
-
-	case 404:
-		result, err := NewMessageForwardFederation404Response(resp)
-		if err != nil {
-			return MessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response404 = result
-		return response, nil
-
-	case 500:
-		result, err := NewMessageForwardFederation500Response(resp)
-		if err != nil {
-			return MessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response500 = result
-		return response, nil
-
-	default:
-		response.UnknownResponse = &UnknownStatusResponse{
-			StatusCode: resp.StatusCode,
-			Response:   resp,
-		}
-		return response, nil
-	}
-}
-
-type NewAttachmentResult struct {
-	StatusCode int
-
-	Response201 NewAttachment201Response
-
-	Response400 NewAttachment400Response
-
-	Response401 NewAttachment401Response
-
-	Response413 NewAttachment413Response
-
-	Response500 NewAttachment500Response
-
-	UnknownResponse *UnknownStatusResponse
-}
-
-func (c *IIMP) NewAttachment(ctx context.Context, params NewAttachmentRequest) (NewAttachmentResult, error) {
-	if err := params.Validate(); err != nil {
-		return NewAttachmentResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid request parameters",
-			Err:     err,
-		}
-	}
-
-	body, err := json.Marshal(params.Body)
-	if err != nil {
-		return NewAttachmentResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to serialize request body",
-			Err:     err,
-		}
-	}
-	path := "/api/client/attachments"
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		c.baseURL+path,
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		return NewAttachmentResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to create HTTP request",
-			Err:     err,
-		}
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
-	if err != nil {
-		return NewAttachmentResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid auth parameter: Authorization",
-			Err:     err,
-		}
-	}
-	req.Header.Set("Authorization", authAuthorization)
-
-	resp, err := c.do(req)
-	if err != nil {
-		return NewAttachmentResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonNetworkError,
-			Message: "network error during HTTP request",
-			Err:     err,
-		}
-	}
-	// resp.Body will be closed in response handlers
-	response := NewAttachmentResult{
-		StatusCode: resp.StatusCode,
-	}
-	switch resp.StatusCode {
-
-	case 201:
-		result, err := NewNewAttachment201Response(resp)
-		if err != nil {
-			return NewAttachmentResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response201 = result
-		return response, nil
-
-	case 400:
-		result, err := NewNewAttachment400Response(resp)
-		if err != nil {
-			return NewAttachmentResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response400 = result
-		return response, nil
-
-	case 401:
-		result, err := NewNewAttachment401Response(resp)
-		if err != nil {
-			return NewAttachmentResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response401 = result
-		return response, nil
-
-	case 413:
-		result, err := NewNewAttachment413Response(resp)
-		if err != nil {
-			return NewAttachmentResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response413 = result
-		return response, nil
-
-	case 500:
-		result, err := NewNewAttachment500Response(resp)
-		if err != nil {
-			return NewAttachmentResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response500 = result
-		return response, nil
-
-	default:
-		response.UnknownResponse = &UnknownStatusResponse{
-			StatusCode: resp.StatusCode,
-			Response:   resp,
-		}
-		return response, nil
-	}
-}
-
 type NewConversationResult struct {
 	StatusCode int
 
@@ -2296,7 +1862,7 @@ func (c *IIMP) NewConversation(ctx context.Context, params NewConversationReques
 			Err:     err,
 		}
 	}
-	path := "/api/client/conversations"
+	path := "/iimp/api/client/conversations"
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -2454,7 +2020,7 @@ func (c *IIMP) NewMessage(ctx context.Context, params NewMessageRequest) (NewMes
 			Err:     err,
 		}
 	}
-	path := "/api/client/conversations/{conversationId}/messages"
+	path := "/iimp/api/client/conversations/{conversationId}/messages"
 
 	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
 	if err != nil {
@@ -2587,6 +2153,150 @@ func (c *IIMP) NewMessage(ctx context.Context, params NewMessageRequest) (NewMes
 	}
 }
 
+type PullUserEventsResult struct {
+	StatusCode int
+
+	Response200 PullUserEvents200Response
+
+	Response400 PullUserEvents400Response
+
+	Response401 PullUserEvents401Response
+
+	Response500 PullUserEvents500Response
+
+	UnknownResponse *UnknownStatusResponse
+}
+
+func (c *IIMP) PullUserEvents(ctx context.Context, params PullUserEventsRequest) (PullUserEventsResult, error) {
+	if err := params.Validate(); err != nil {
+		return PullUserEventsResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid request parameters",
+			Err:     err,
+		}
+	}
+
+	path := "/iimp/api/client/events"
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		"GET",
+		c.baseURL+path,
+		nil,
+	)
+	if err != nil {
+		return PullUserEventsResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "failed to create HTTP request",
+			Err:     err,
+		}
+	}
+
+	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
+	if err != nil {
+		return PullUserEventsResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid auth parameter: Authorization",
+			Err:     err,
+		}
+	}
+	req.Header.Set("Authorization", authAuthorization)
+
+	q := req.URL.Query()
+
+	queryCursor, err := paramToString(params.Cursor, "query parameter: Cursor", "*string", false)
+	if err != nil {
+		return PullUserEventsResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid query parameter: cursor",
+			Err:     err,
+		}
+	}
+	q.Set("cursor", queryCursor)
+
+	queryLimit, err := paramToString(params.Limit, "query parameter: Limit", "*float64", false)
+	if err != nil {
+		return PullUserEventsResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid query parameter: limit",
+			Err:     err,
+		}
+	}
+	q.Set("limit", queryLimit)
+
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := c.do(req)
+	if err != nil {
+		return PullUserEventsResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonNetworkError,
+			Message: "network error during HTTP request",
+			Err:     err,
+		}
+	}
+	// resp.Body will be closed in response handlers
+	response := PullUserEventsResult{
+		StatusCode: resp.StatusCode,
+	}
+	switch resp.StatusCode {
+
+	case 200:
+		result, err := NewPullUserEvents200Response(resp)
+		if err != nil {
+			return PullUserEventsResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response200 = result
+		return response, nil
+
+	case 400:
+		result, err := NewPullUserEvents400Response(resp)
+		if err != nil {
+			return PullUserEventsResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response400 = result
+		return response, nil
+
+	case 401:
+		result, err := NewPullUserEvents401Response(resp)
+		if err != nil {
+			return PullUserEventsResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response401 = result
+		return response, nil
+
+	case 500:
+		result, err := NewPullUserEvents500Response(resp)
+		if err != nil {
+			return PullUserEventsResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response500 = result
+		return response, nil
+
+	default:
+		response.UnknownResponse = &UnknownStatusResponse{
+			StatusCode: resp.StatusCode,
+			Response:   resp,
+		}
+		return response, nil
+	}
+}
+
 type ReactToMessageResult struct {
 	StatusCode int
 
@@ -2622,7 +2332,7 @@ func (c *IIMP) ReactToMessage(ctx context.Context, params ReactToMessageRequest)
 			Err:     err,
 		}
 	}
-	path := "/api/client/conversations/{conversationId}/messages/{messageId}/react"
+	path := "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/react"
 
 	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
 	if err != nil {
@@ -2765,184 +2475,6 @@ func (c *IIMP) ReactToMessage(ctx context.Context, params ReactToMessageRequest)
 	}
 }
 
-type ReactToMessageForwardFederationResult struct {
-	StatusCode int
-
-	Response200 ReactToMessageForwardFederation200Response
-
-	Response400 ReactToMessageForwardFederation400Response
-
-	Response401 ReactToMessageForwardFederation401Response
-
-	Response403 ReactToMessageForwardFederation403Response
-
-	Response404 ReactToMessageForwardFederation404Response
-
-	Response500 ReactToMessageForwardFederation500Response
-
-	UnknownResponse *UnknownStatusResponse
-}
-
-func (c *IIMP) ReactToMessageForwardFederation(ctx context.Context, params ReactToMessageForwardFederationRequest) (ReactToMessageForwardFederationResult, error) {
-	if err := params.Validate(); err != nil {
-		return ReactToMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid request parameters",
-			Err:     err,
-		}
-	}
-
-	body, err := json.Marshal(params.Body)
-	if err != nil {
-		return ReactToMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to serialize request body",
-			Err:     err,
-		}
-	}
-	path := "/api/federation/conversations/{conversationId}/messages/{messageId}/react/forward"
-
-	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
-	if err != nil {
-		return ReactToMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: conversationId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{conversationId}", fmt.Sprintf("%v", pathParamConversationId))
-
-	pathParamMessageId, err := paramToString(params.MessageId, "path parameter: MessageId", "string", true)
-	if err != nil {
-		return ReactToMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: messageId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{messageId}", fmt.Sprintf("%v", pathParamMessageId))
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		c.baseURL+path,
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		return ReactToMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to create HTTP request",
-			Err:     err,
-		}
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
-	if err != nil {
-		return ReactToMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid auth parameter: Authorization",
-			Err:     err,
-		}
-	}
-	req.Header.Set("Authorization", authAuthorization)
-
-	resp, err := c.do(req)
-	if err != nil {
-		return ReactToMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonNetworkError,
-			Message: "network error during HTTP request",
-			Err:     err,
-		}
-	}
-	// resp.Body will be closed in response handlers
-	response := ReactToMessageForwardFederationResult{
-		StatusCode: resp.StatusCode,
-	}
-	switch resp.StatusCode {
-
-	case 200:
-		result, err := NewReactToMessageForwardFederation200Response(resp)
-		if err != nil {
-			return ReactToMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response200 = result
-		return response, nil
-
-	case 400:
-		result, err := NewReactToMessageForwardFederation400Response(resp)
-		if err != nil {
-			return ReactToMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response400 = result
-		return response, nil
-
-	case 401:
-		result, err := NewReactToMessageForwardFederation401Response(resp)
-		if err != nil {
-			return ReactToMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response401 = result
-		return response, nil
-
-	case 403:
-		result, err := NewReactToMessageForwardFederation403Response(resp)
-		if err != nil {
-			return ReactToMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response403 = result
-		return response, nil
-
-	case 404:
-		result, err := NewReactToMessageForwardFederation404Response(resp)
-		if err != nil {
-			return ReactToMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response404 = result
-		return response, nil
-
-	case 500:
-		result, err := NewReactToMessageForwardFederation500Response(resp)
-		if err != nil {
-			return ReactToMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response500 = result
-		return response, nil
-
-	default:
-		response.UnknownResponse = &UnknownStatusResponse{
-			StatusCode: resp.StatusCode,
-			Response:   resp,
-		}
-		return response, nil
-	}
-}
-
 type ReadMessageResult struct {
 	StatusCode int
 
@@ -2970,7 +2502,7 @@ func (c *IIMP) ReadMessage(ctx context.Context, params ReadMessageRequest) (Read
 		}
 	}
 
-	path := "/api/client/conversations/{conversationId}/messages/{messageId}/read"
+	path := "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/read"
 
 	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
 	if err != nil {
@@ -3111,184 +2643,6 @@ func (c *IIMP) ReadMessage(ctx context.Context, params ReadMessageRequest) (Read
 	}
 }
 
-type ReadMessageForwardFederationResult struct {
-	StatusCode int
-
-	Response200 ReadMessageForwardFederation200Response
-
-	Response400 ReadMessageForwardFederation400Response
-
-	Response401 ReadMessageForwardFederation401Response
-
-	Response403 ReadMessageForwardFederation403Response
-
-	Response404 ReadMessageForwardFederation404Response
-
-	Response500 ReadMessageForwardFederation500Response
-
-	UnknownResponse *UnknownStatusResponse
-}
-
-func (c *IIMP) ReadMessageForwardFederation(ctx context.Context, params ReadMessageForwardFederationRequest) (ReadMessageForwardFederationResult, error) {
-	if err := params.Validate(); err != nil {
-		return ReadMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid request parameters",
-			Err:     err,
-		}
-	}
-
-	body, err := json.Marshal(params.Body)
-	if err != nil {
-		return ReadMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to serialize request body",
-			Err:     err,
-		}
-	}
-	path := "/api/federation/conversations/{conversationId}/messages/{messageId}/read/forward"
-
-	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
-	if err != nil {
-		return ReadMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: conversationId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{conversationId}", fmt.Sprintf("%v", pathParamConversationId))
-
-	pathParamMessageId, err := paramToString(params.MessageId, "path parameter: MessageId", "string", true)
-	if err != nil {
-		return ReadMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: messageId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{messageId}", fmt.Sprintf("%v", pathParamMessageId))
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		c.baseURL+path,
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		return ReadMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to create HTTP request",
-			Err:     err,
-		}
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
-	if err != nil {
-		return ReadMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid auth parameter: Authorization",
-			Err:     err,
-		}
-	}
-	req.Header.Set("Authorization", authAuthorization)
-
-	resp, err := c.do(req)
-	if err != nil {
-		return ReadMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonNetworkError,
-			Message: "network error during HTTP request",
-			Err:     err,
-		}
-	}
-	// resp.Body will be closed in response handlers
-	response := ReadMessageForwardFederationResult{
-		StatusCode: resp.StatusCode,
-	}
-	switch resp.StatusCode {
-
-	case 200:
-		result, err := NewReadMessageForwardFederation200Response(resp)
-		if err != nil {
-			return ReadMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response200 = result
-		return response, nil
-
-	case 400:
-		result, err := NewReadMessageForwardFederation400Response(resp)
-		if err != nil {
-			return ReadMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response400 = result
-		return response, nil
-
-	case 401:
-		result, err := NewReadMessageForwardFederation401Response(resp)
-		if err != nil {
-			return ReadMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response401 = result
-		return response, nil
-
-	case 403:
-		result, err := NewReadMessageForwardFederation403Response(resp)
-		if err != nil {
-			return ReadMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response403 = result
-		return response, nil
-
-	case 404:
-		result, err := NewReadMessageForwardFederation404Response(resp)
-		if err != nil {
-			return ReadMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response404 = result
-		return response, nil
-
-	case 500:
-		result, err := NewReadMessageForwardFederation500Response(resp)
-		if err != nil {
-			return ReadMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response500 = result
-		return response, nil
-
-	default:
-		response.UnknownResponse = &UnknownStatusResponse{
-			StatusCode: resp.StatusCode,
-			Response:   resp,
-		}
-		return response, nil
-	}
-}
-
 type RedactMessageResult struct {
 	StatusCode int
 
@@ -3316,7 +2670,7 @@ func (c *IIMP) RedactMessage(ctx context.Context, params RedactMessageRequest) (
 		}
 	}
 
-	path := "/api/client/conversations/{conversationId}/messages/{messageId}/redact"
+	path := "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/redact"
 
 	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
 	if err != nil {
@@ -3457,188 +2811,12 @@ func (c *IIMP) RedactMessage(ctx context.Context, params RedactMessageRequest) (
 	}
 }
 
-type RedactMessageForwardFederationResult struct {
-	StatusCode int
-
-	Response200 RedactMessageForwardFederation200Response
-
-	Response400 RedactMessageForwardFederation400Response
-
-	Response401 RedactMessageForwardFederation401Response
-
-	Response403 RedactMessageForwardFederation403Response
-
-	Response404 RedactMessageForwardFederation404Response
-
-	Response500 RedactMessageForwardFederation500Response
-
-	UnknownResponse *UnknownStatusResponse
-}
-
-func (c *IIMP) RedactMessageForwardFederation(ctx context.Context, params RedactMessageForwardFederationRequest) (RedactMessageForwardFederationResult, error) {
-	if err := params.Validate(); err != nil {
-		return RedactMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid request parameters",
-			Err:     err,
-		}
-	}
-
-	body, err := json.Marshal(params.Body)
-	if err != nil {
-		return RedactMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to serialize request body",
-			Err:     err,
-		}
-	}
-	path := "/api/federation/conversations/{conversationId}/messages/{messageId}/redact/forward"
-
-	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
-	if err != nil {
-		return RedactMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: conversationId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{conversationId}", fmt.Sprintf("%v", pathParamConversationId))
-
-	pathParamMessageId, err := paramToString(params.MessageId, "path parameter: MessageId", "string", true)
-	if err != nil {
-		return RedactMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: messageId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{messageId}", fmt.Sprintf("%v", pathParamMessageId))
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"POST",
-		c.baseURL+path,
-		bytes.NewReader(body),
-	)
-	if err != nil {
-		return RedactMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to create HTTP request",
-			Err:     err,
-		}
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
-	if err != nil {
-		return RedactMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid auth parameter: Authorization",
-			Err:     err,
-		}
-	}
-	req.Header.Set("Authorization", authAuthorization)
-
-	resp, err := c.do(req)
-	if err != nil {
-		return RedactMessageForwardFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonNetworkError,
-			Message: "network error during HTTP request",
-			Err:     err,
-		}
-	}
-	// resp.Body will be closed in response handlers
-	response := RedactMessageForwardFederationResult{
-		StatusCode: resp.StatusCode,
-	}
-	switch resp.StatusCode {
-
-	case 200:
-		result, err := NewRedactMessageForwardFederation200Response(resp)
-		if err != nil {
-			return RedactMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response200 = result
-		return response, nil
-
-	case 400:
-		result, err := NewRedactMessageForwardFederation400Response(resp)
-		if err != nil {
-			return RedactMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response400 = result
-		return response, nil
-
-	case 401:
-		result, err := NewRedactMessageForwardFederation401Response(resp)
-		if err != nil {
-			return RedactMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response401 = result
-		return response, nil
-
-	case 403:
-		result, err := NewRedactMessageForwardFederation403Response(resp)
-		if err != nil {
-			return RedactMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response403 = result
-		return response, nil
-
-	case 404:
-		result, err := NewRedactMessageForwardFederation404Response(resp)
-		if err != nil {
-			return RedactMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response404 = result
-		return response, nil
-
-	case 500:
-		result, err := NewRedactMessageForwardFederation500Response(resp)
-		if err != nil {
-			return RedactMessageForwardFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response500 = result
-		return response, nil
-
-	default:
-		response.UnknownResponse = &UnknownStatusResponse{
-			StatusCode: resp.StatusCode,
-			Response:   resp,
-		}
-		return response, nil
-	}
-}
-
 type RefreshSessionResult struct {
 	StatusCode int
 
 	Response200 RefreshSession200Response
+
+	Response400 RefreshSession400Response
 
 	Response401 RefreshSession401Response
 
@@ -3664,7 +2842,7 @@ func (c *IIMP) RefreshSession(ctx context.Context, params RefreshSessionRequest)
 			Err:     err,
 		}
 	}
-	path := "/api/client/refresh-session"
+	path := "/iimp/api/client/refresh-session"
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -3706,6 +2884,18 @@ func (c *IIMP) RefreshSession(ctx context.Context, params RefreshSessionRequest)
 			}
 		}
 		response.Response200 = result
+		return response, nil
+
+	case 400:
+		result, err := NewRefreshSession400Response(resp)
+		if err != nil {
+			return RefreshSessionResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response400 = result
 		return response, nil
 
 	case 401:
@@ -3770,7 +2960,7 @@ func (c *IIMP) RequestResetPassword(ctx context.Context, params RequestResetPass
 			Err:     err,
 		}
 	}
-	path := "/api/client/request-reset-password"
+	path := "/iimp/api/client/request-reset-password"
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -3876,7 +3066,7 @@ func (c *IIMP) ResetPassword(ctx context.Context, params ResetPasswordRequest) (
 			Err:     err,
 		}
 	}
-	path := "/api/client/reset-password"
+	path := "/iimp/api/client/reset-password"
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -3960,6 +3150,8 @@ type SignUpResult struct {
 
 	Response400 SignUp400Response
 
+	Response403 SignUp403Response
+
 	Response409 SignUp409Response
 
 	Response500 SignUp500Response
@@ -3984,7 +3176,7 @@ func (c *IIMP) SignUp(ctx context.Context, params SignUpRequest) (SignUpResult, 
 			Err:     err,
 		}
 	}
-	path := "/api/client/signup"
+	path := "/iimp/api/client/signup"
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -4040,6 +3232,18 @@ func (c *IIMP) SignUp(ctx context.Context, params SignUpRequest) (SignUpResult, 
 		response.Response400 = result
 		return response, nil
 
+	case 403:
+		result, err := NewSignUp403Response(resp)
+		if err != nil {
+			return SignUpResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response403 = result
+		return response, nil
+
 	case 409:
 		result, err := NewSignUp409Response(resp)
 		if err != nil {
@@ -4056,136 +3260,6 @@ func (c *IIMP) SignUp(ctx context.Context, params SignUpRequest) (SignUpResult, 
 		result, err := NewSignUp500Response(resp)
 		if err != nil {
 			return SignUpResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response500 = result
-		return response, nil
-
-	default:
-		response.UnknownResponse = &UnknownStatusResponse{
-			StatusCode: resp.StatusCode,
-			Response:   resp,
-		}
-		return response, nil
-	}
-}
-
-type SyncUserEventsResult struct {
-	StatusCode int
-
-	Response200 SyncUserEvents200Response
-
-	Response401 SyncUserEvents401Response
-
-	Response500 SyncUserEvents500Response
-
-	UnknownResponse *UnknownStatusResponse
-}
-
-func (c *IIMP) SyncUserEvents(ctx context.Context, params SyncUserEventsRequest) (SyncUserEventsResult, error) {
-	if err := params.Validate(); err != nil {
-		return SyncUserEventsResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid request parameters",
-			Err:     err,
-		}
-	}
-
-	path := "/api/client/events/sync"
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"GET",
-		c.baseURL+path,
-		nil,
-	)
-	if err != nil {
-		return SyncUserEventsResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to create HTTP request",
-			Err:     err,
-		}
-	}
-
-	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
-	if err != nil {
-		return SyncUserEventsResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid auth parameter: Authorization",
-			Err:     err,
-		}
-	}
-	req.Header.Set("Authorization", authAuthorization)
-
-	q := req.URL.Query()
-
-	queryCursor, err := paramToString(params.Cursor, "query parameter: Cursor", "*float64", false)
-	if err != nil {
-		return SyncUserEventsResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid query parameter: cursor",
-			Err:     err,
-		}
-	}
-	q.Set("cursor", queryCursor)
-
-	queryLimit, err := paramToString(params.Limit, "query parameter: Limit", "*float64", false)
-	if err != nil {
-		return SyncUserEventsResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid query parameter: limit",
-			Err:     err,
-		}
-	}
-	q.Set("limit", queryLimit)
-
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := c.do(req)
-	if err != nil {
-		return SyncUserEventsResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonNetworkError,
-			Message: "network error during HTTP request",
-			Err:     err,
-		}
-	}
-	// resp.Body will be closed in response handlers
-	response := SyncUserEventsResult{
-		StatusCode: resp.StatusCode,
-	}
-	switch resp.StatusCode {
-
-	case 200:
-		result, err := NewSyncUserEvents200Response(resp)
-		if err != nil {
-			return SyncUserEventsResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response200 = result
-		return response, nil
-
-	case 401:
-		result, err := NewSyncUserEvents401Response(resp)
-		if err != nil {
-			return SyncUserEventsResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response401 = result
-		return response, nil
-
-	case 500:
-		result, err := NewSyncUserEvents500Response(resp)
-		if err != nil {
-			return SyncUserEventsResult{}, &IIMPError{
 				Reason:  IIMPErrorReasonDecodeError,
 				Message: "failed to decode response",
 				Err:     err,
@@ -4238,7 +3312,7 @@ func (c *IIMP) UpdateConversation(ctx context.Context, params UpdateConversation
 			Err:     err,
 		}
 	}
-	path := "/api/client/conversations/{conversationId}"
+	path := "/iimp/api/client/conversations/{conversationId}"
 
 	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
 	if err != nil {
@@ -4374,7 +3448,7 @@ func (c *IIMP) UpdateConversation(ctx context.Context, params UpdateConversation
 type UploadAttachmentResult struct {
 	StatusCode int
 
-	Response204 UploadAttachment204Response
+	Response201 UploadAttachment201Response
 
 	Response400 UploadAttachment400Response
 
@@ -4383,8 +3457,6 @@ type UploadAttachmentResult struct {
 	Response403 UploadAttachment403Response
 
 	Response404 UploadAttachment404Response
-
-	Response409 UploadAttachment409Response
 
 	Response413 UploadAttachment413Response
 
@@ -4402,21 +3474,11 @@ func (c *IIMP) UploadAttachment(ctx context.Context, params UploadAttachmentRequ
 		}
 	}
 
-	path := "/api/client/attachments/{attachmentId}/bytes"
-
-	pathParamAttachmentId, err := paramToString(params.AttachmentId, "path parameter: AttachmentId", "string", true)
-	if err != nil {
-		return UploadAttachmentResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: attachmentId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{attachmentId}", fmt.Sprintf("%v", pathParamAttachmentId))
+	path := "/iimp/api/client/attachments"
 
 	req, err := http.NewRequestWithContext(
 		ctx,
-		"PUT",
+		"POST",
 		c.baseURL+path,
 		nil,
 	)
@@ -4427,6 +3489,16 @@ func (c *IIMP) UploadAttachment(ctx context.Context, params UploadAttachmentRequ
 			Err:     err,
 		}
 	}
+
+	headerFilename, err := paramToString(params.Filename, "header parameter: Filename", "string", true)
+	if err != nil {
+		return UploadAttachmentResult{}, &IIMPError{
+			Reason:  IIMPErrorReasonInvalidRequest,
+			Message: "invalid header parameter: X-IIMP-Attachment-Filename",
+			Err:     err,
+		}
+	}
+	req.Header.Set("X-IIMP-Attachment-Filename", headerFilename)
 
 	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
 	if err != nil {
@@ -4452,8 +3524,8 @@ func (c *IIMP) UploadAttachment(ctx context.Context, params UploadAttachmentRequ
 	}
 	switch resp.StatusCode {
 
-	case 204:
-		result, err := NewUploadAttachment204Response(resp)
+	case 201:
+		result, err := NewUploadAttachment201Response(resp)
 		if err != nil {
 			return UploadAttachmentResult{}, &IIMPError{
 				Reason:  IIMPErrorReasonDecodeError,
@@ -4461,7 +3533,7 @@ func (c *IIMP) UploadAttachment(ctx context.Context, params UploadAttachmentRequ
 				Err:     err,
 			}
 		}
-		response.Response204 = result
+		response.Response201 = result
 		return response, nil
 
 	case 400:
@@ -4510,18 +3582,6 @@ func (c *IIMP) UploadAttachment(ctx context.Context, params UploadAttachmentRequ
 			}
 		}
 		response.Response404 = result
-		return response, nil
-
-	case 409:
-		result, err := NewUploadAttachment409Response(resp)
-		if err != nil {
-			return UploadAttachmentResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response409 = result
 		return response, nil
 
 	case 413:

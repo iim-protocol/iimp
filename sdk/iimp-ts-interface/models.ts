@@ -38,7 +38,7 @@ export const IIMPErrorReasonOtherError = "other_error";
 
 
 const AddPublicKeyRequestHTTPMethod = "POST";
-const AddPublicKeyRequestRoutePath   = "/api/client/keys";
+const AddPublicKeyRequestRoutePath   = "/iimp/api/client/keys";
 
 /**
  * Add a new public key for end-to-end encryption.
@@ -252,7 +252,7 @@ export async function NewAddPublicKey500Response(resp: Response): Promise<AddPub
 
 
 const ConversationFederationRequestHTTPMethod = "POST";
-const ConversationFederationRequestRoutePath   = "/api/federation/conversations";
+const ConversationFederationRequestRoutePath   = "/iimp/api/federation/conversations";
 
 /**
  * \"FEDERATION\" Create/Update a conversation from another server. This endpoint is used by other servers to create/update a conversation that includes users from the local server. UPSERT operation should be performed by the receiving server.
@@ -280,7 +280,7 @@ export type ConversationFederationRequest = {
 export type ConversationFederationRequestBody = {
   
   /**
-  * A unique identifier for the conversation, typically a UUIDv7.
+  * A unique identifier for the conversation.
   * Required
   *  Must be non-empty
   */
@@ -301,11 +301,18 @@ export type ConversationFederationRequestBody = {
   ConversationOwnerId: string;
 
   /**
-  * The timestamp when the conversation was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+  * The timestamp when the conversation was created. Format => RFC3339.
   * Required
   *  Must be non-empty
   */
   CreatedAt: string;
+
+  /**
+  * A flag indicating whether the conversation is a Direct Message (DM) or a Group Conversation. A Direct Message conversation has exactly 2 participants (including the owner), while a Group Conversation has more than 2 participants.
+  * Required
+  * 
+  */
+  IsDM: boolean;
 
   /**
   * A list of participants in the conversation. The owner of the conversation is also included in this list. Participants can be added or removed by the owner user. Contains at least 2 participants (including the owner) for a Direct Conversation and >2 participants for a Group Conversation.
@@ -321,21 +328,14 @@ export type ConversationFederationRequestBody = {
 export type ConversationFederationRequestBodyParticipantsItem = {
   
   /**
-  * The unique identifier of the conversation that the participant is part of. This is typically a UUIDv7.
-  * Required
-  *  Must be non-empty
-  */
-  ConversationId: string;
-
-  /**
-  * The timestamp when the participant joined the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+  * The timestamp when the participant joined the conversation. Format => RFC3339.
   * Required
   *  Must be non-empty
   */
   JoinedAt: string;
 
   /**
-  * The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
+  * The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => RFC3339. A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
   * Optional
   * 
   */
@@ -439,6 +439,9 @@ function ValidateConversationFederationRequestBody(o: ConversationFederationRequ
   
   
   
+  
+  
+  
   if (o.Participants.length === 0) {
     throw new Error("Field 'Participants' must be non-empty");
   }
@@ -455,15 +458,6 @@ function ValidateConversationFederationRequestBody(o: ConversationFederationRequ
 }
 
 function ValidateConversationFederationRequestBodyParticipantsItem(o: ConversationFederationRequestBodyParticipantsItem) : IIMPError | null {
-  
-  
-  
-  if (o.ConversationId.trim() === "") {
-    throw new Error("Field 'ConversationId' must be non-empty");
-  }
-  
-  
-  
   
   
   
@@ -674,18 +668,11 @@ export type DiscoverServer200Response = {
 export type DiscoverServer200ResponseBody = {
   
   /**
-  * Canonical domain name of the server.
+  * Canonical domain name of the server. Includes the scheme, e.g. https://server-a.domain1.me
   * Required
   *  Must be non-empty
   */
   Domain: string;
-
-  /**
-  * URL endpoint for federation with other IIMP servers.
-  * Required
-  *  Must be non-empty
-  */
-  FederationEndpoint: string;
 
   /**
   * IIMP protocol version supported by the server.
@@ -716,6 +703,25 @@ export async function NewDiscoverServer200Response(resp: Response): Promise<Disc
 }
 
 
+export type DiscoverServer404Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDiscoverServer404Response(resp: Response): Promise<DiscoverServer404Response> {
+  var result = {} as DiscoverServer404Response;
+
+  
+
+  
+  return result
+}
+
+
 export type DiscoverServer500Response = {
   
 
@@ -737,18 +743,18 @@ export async function NewDiscoverServer500Response(resp: Response): Promise<Disc
 
 
 
-const EditMessageRequestHTTPMethod = "PUT";
-const EditMessageRequestRoutePath   = "/api/client/conversations/{conversationId}/messages/{messageId}";
+const DownloadAttachmentRequestHTTPMethod = "GET";
+const DownloadAttachmentRequestRoutePath   = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes";
 
 /**
- * Edit an existing message in a conversation. Only the sender of the message can edit it.
+ * Download the bytes of an attachment for a message in a conversation. This is a NOOP endpoint for documentation, since the actual fetching of the attachment bytes is to be done by the client.
  */
-export type EditMessageRequest = {
+export type DownloadAttachmentRequest = {
 
   /**
   * Source: path parameter "{conversationId}"
   
-  * The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+  * The unique identifier of the conversation that the message belongs to.
   * 
   * Required
   */
@@ -758,7 +764,431 @@ export type EditMessageRequest = {
   /**
   * Source: path parameter "{messageId}"
   
-  * The unique identifier of the message to edit. This is typically a UUIDv7
+  * The unique identifier of the message that the attachment belongs to.
+  * 
+  * Required
+  */
+  MessageId: string;
+
+
+  /**
+  * Source: path parameter "{fileId}"
+  
+  * The unique identifier of the file to fetch. This should correspond to an attachment that was previously uploaded to the server using the UploadAttachment endpoint.
+  * 
+  * Required
+  */
+  FileId: string;
+
+
+
+
+
+  /**
+  * Authentication parameters
+  */
+  Auth: DownloadAttachmentRequestAuthParams;
+
+
+}
+
+
+
+
+export type DownloadAttachmentRequestAuthParams = {
+  
+  
+  /**
+  * Required Authentication Method
+  * Source: header "Authorization"
+  *  Description: A token used to authenticate the client session. This token is obtained after a successful login and must be included in the header of subsequent requests to access protected resources. 
+  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
+  */
+  Authorization?: string;
+  
+  
+
+  
+};
+
+
+
+export function ValidateDownloadAttachmentRequest(req: DownloadAttachmentRequest) : IIMPError | null {
+  if (!req) {
+    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
+  }
+
+  
+
+  
+  
+  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
+    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
+  }
+  
+  
+
+  
+
+  return null;
+}
+
+
+
+
+
+
+
+export type DownloadAttachment200Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDownloadAttachment200Response(resp: Response): Promise<DownloadAttachment200Response> {
+  var result = {} as DownloadAttachment200Response;
+
+  
+
+  
+  return result
+}
+
+
+export type DownloadAttachment400Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDownloadAttachment400Response(resp: Response): Promise<DownloadAttachment400Response> {
+  var result = {} as DownloadAttachment400Response;
+
+  
+
+  
+  return result
+}
+
+
+export type DownloadAttachment401Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDownloadAttachment401Response(resp: Response): Promise<DownloadAttachment401Response> {
+  var result = {} as DownloadAttachment401Response;
+
+  
+
+  
+  return result
+}
+
+
+export type DownloadAttachment403Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDownloadAttachment403Response(resp: Response): Promise<DownloadAttachment403Response> {
+  var result = {} as DownloadAttachment403Response;
+
+  
+
+  
+  return result
+}
+
+
+export type DownloadAttachment404Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDownloadAttachment404Response(resp: Response): Promise<DownloadAttachment404Response> {
+  var result = {} as DownloadAttachment404Response;
+
+  
+
+  
+  return result
+}
+
+
+export type DownloadAttachment500Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDownloadAttachment500Response(resp: Response): Promise<DownloadAttachment500Response> {
+  var result = {} as DownloadAttachment500Response;
+
+  
+
+  
+  return result
+}
+
+
+
+
+const DownloadAttachmentBytesFederationRequestHTTPMethod = "GET";
+const DownloadAttachmentBytesFederationRequestRoutePath   = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes";
+
+/**
+ * \"FEDERATION\" Download the bytes of an attachment from another server. This is a noop endpoint for documentation purposes, the server should implement fetching the actual bytes using the provided endpoint. Server must implement this, requesting server needs to fetch the bytes NOT using the SDK.
+ */
+export type DownloadAttachmentBytesFederationRequest = {
+
+  /**
+  * Source: path parameter "{fileId}"
+  
+  * Unique identifier of the file to fetch.
+  * 
+  * Required
+  */
+  FileId: string;
+
+
+  /**
+  * Source: path parameter "{messageId}"
+  
+  * Unique identifier of the message that the file/attachment belongs to.
+  * 
+  * Required
+  */
+  MessageId: string;
+
+
+  /**
+  * Source: path parameter "{conversationId}"
+  
+  * Unique identifier of the conversation that the message belongs to.
+  * 
+  * Required
+  */
+  ConversationId: string;
+
+
+
+
+
+  /**
+  * Authentication parameters
+  */
+  Auth: DownloadAttachmentBytesFederationRequestAuthParams;
+
+
+}
+
+
+
+
+export type DownloadAttachmentBytesFederationRequestAuthParams = {
+  
+  
+  /**
+  * Required Authentication Method
+  * Source: header "Authorization"
+  *  Description: Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint. 
+  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
+  */
+  Authorization?: string;
+  
+  
+
+  
+};
+
+
+
+export function ValidateDownloadAttachmentBytesFederationRequest(req: DownloadAttachmentBytesFederationRequest) : IIMPError | null {
+  if (!req) {
+    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
+  }
+
+  
+
+  
+  
+  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
+    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
+  }
+  
+  
+
+  
+
+  return null;
+}
+
+
+
+
+
+
+
+export type DownloadAttachmentBytesFederation200Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDownloadAttachmentBytesFederation200Response(resp: Response): Promise<DownloadAttachmentBytesFederation200Response> {
+  var result = {} as DownloadAttachmentBytesFederation200Response;
+
+  
+
+  
+  return result
+}
+
+
+export type DownloadAttachmentBytesFederation400Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDownloadAttachmentBytesFederation400Response(resp: Response): Promise<DownloadAttachmentBytesFederation400Response> {
+  var result = {} as DownloadAttachmentBytesFederation400Response;
+
+  
+
+  
+  return result
+}
+
+
+export type DownloadAttachmentBytesFederation401Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDownloadAttachmentBytesFederation401Response(resp: Response): Promise<DownloadAttachmentBytesFederation401Response> {
+  var result = {} as DownloadAttachmentBytesFederation401Response;
+
+  
+
+  
+  return result
+}
+
+
+export type DownloadAttachmentBytesFederation403Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDownloadAttachmentBytesFederation403Response(resp: Response): Promise<DownloadAttachmentBytesFederation403Response> {
+  var result = {} as DownloadAttachmentBytesFederation403Response;
+
+  
+
+  
+  return result
+}
+
+
+export type DownloadAttachmentBytesFederation404Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDownloadAttachmentBytesFederation404Response(resp: Response): Promise<DownloadAttachmentBytesFederation404Response> {
+  var result = {} as DownloadAttachmentBytesFederation404Response;
+
+  
+
+  
+  return result
+}
+
+
+export type DownloadAttachmentBytesFederation500Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewDownloadAttachmentBytesFederation500Response(resp: Response): Promise<DownloadAttachmentBytesFederation500Response> {
+  var result = {} as DownloadAttachmentBytesFederation500Response;
+
+  
+
+  
+  return result
+}
+
+
+
+
+const EditMessageRequestHTTPMethod = "PUT";
+const EditMessageRequestRoutePath   = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}";
+
+/**
+ * Edit an existing message in a conversation. Only the sender of the message can edit it.
+ */
+export type EditMessageRequest = {
+
+  /**
+  * Source: path parameter "{conversationId}"
+  
+  * The unique identifier of the conversation that the message belongs to.
+  * 
+  * Required
+  */
+  ConversationId: string;
+
+
+  /**
+  * Source: path parameter "{messageId}"
+  
+  * The unique identifier of the message to edit.
   * 
   * Required
   */
@@ -806,7 +1236,7 @@ export type EditMessageRequestBodyMessageContent = {
   Content: string;
 
   /**
-  * Encryption details for the recipients of the message.
+  * Encryption details for the recipients of the message. The sender client should not include details for participants of a convo where RemovedAt != nil.
   * Required
   *  Must be non-empty
   */
@@ -820,7 +1250,7 @@ export type EditMessageRequestBodyMessageContent = {
   Nonce: string;
 
   /**
-  * The timestamp when the message content was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
+  * The timestamp when the message content was created. Format => RFC3339. This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
   * Required
   *  Must be non-empty
   */
@@ -1171,905 +1601,6 @@ export async function NewEditMessage500Response(resp: Response): Promise<EditMes
 
 
 
-const EditMessageForwardFederationRequestHTTPMethod = "PUT";
-const EditMessageForwardFederationRequestRoutePath   = "/api/federation/conversations/{conversationId}/messages/{messageId}/edit/forward";
-
-/**
- * \"FEDERATION\" Edit a message in a conversation on another server.
- */
-export type EditMessageForwardFederationRequest = {
-
-  /**
-  * Source: path parameter "{conversationId}"
-  
-  * Unique identifier of the conversation to edit the message in.
-  * 
-  * Required
-  */
-  ConversationId: string;
-
-
-  /**
-  * Source: path parameter "{messageId}"
-  
-  * Unique identifier of the message to edit.
-  * 
-  * Required
-  */
-  MessageId: string;
-
-
-
-
-
-  /**
-  * Authentication parameters
-  */
-  Auth: EditMessageForwardFederationRequestAuthParams;
-
-
-  /**
-  * Request body
-  */
-  Body: EditMessageForwardFederationRequestBody;
-
-}
-
-
-
-export type EditMessageForwardFederationRequestBody = {
-  
-  /**
-  * User ID of the sender of the message to edit. This should be in the format localpart@domain and must belong to the requesting server and should be equal to the sender's id on the receiving server's message.
-  * Required
-  *  Must be non-empty
-  */
-  SenderUserId: string;
-
-  /**
-  * Updated message details.
-  * Required
-  * 
-  */
-  UpdatedMessage: EditMessageForwardFederationRequestBodyUpdatedMessage;
-
-}
-
-
-
-export type EditMessageForwardFederationRequestBodyUpdatedMessage = {
-  
-  /**
-  * No description provided
-  * Required
-  * 
-  */
-  MessageContent: EditMessageForwardFederationRequestBodyUpdatedMessageMessageContent;
-
-}
-
-
-
-export type EditMessageForwardFederationRequestBodyUpdatedMessageMessageContent = {
-  
-  /**
-  * The content of the message to be sent in the conversation. The content should be encrypted using an AES key, and the AES key should be encrypted for each recipient using their respective public keys. The server will store the encrypted message content and the encrypted keys for each recipient, allowing the recipients to decrypt the AES key using their private keys and then use it to decrypt the message content.
-  * Required
-  *  Must be non-empty
-  */
-  Content: string;
-
-  /**
-  * Encryption details for the recipients of the message.
-  * Required
-  *  Must be non-empty
-  */
-  EncryptionData: Array<EditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItem>;
-
-  /**
-  * The nonce (or initialization vector) used in the AES encryption of the message content. This should be a unique value for each message encrypted with the same AES key to ensure security. The nonce is required for the decryption process, as it is used along with the AES key to decrypt the message content. The server will store the nonce along with the encrypted message content and deliver it to the recipients, allowing them to use it in the decryption process. The nonce should be generated securely (e.g., using a cryptographically secure random number generator) and should be of 12 bytes (96 bits) in length for AES-256-GCM encryption.
-  * Required
-  *  Must be non-empty
-  */
-  Nonce: string;
-
-  /**
-  * The timestamp when the message content was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
-  * Required
-  *  Must be non-empty
-  */
-  Timestamp: string;
-
-}
-
-
-
-export type EditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItem = {
-  
-  /**
-  * Encryption details for a recipient of the message.
-  * Required
-  * 
-  */
-  Encryption: EditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItemEncryption;
-
-  /**
-  * User ID of the recipient of the message. (localpart@domain). This field is included to associate the encryption details with the specific recipient, allowing the server to deliver the correct encrypted key and nonce to each recipient along with the encrypted message content.
-  * Required
-  *  Must be non-empty
-  */
-  RecipientId: string;
-
-}
-
-
-
-export type EditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItemEncryption = {
-  
-  /**
-  * The AES key used to encrypt the message content, encrypted with the recipient's public key using an asymmetric encryption algorithm (X25519 + HKDF). The server will store this encrypted key and deliver it to the recipient along with the encrypted message content, allowing the recipient to decrypt the AES key using their private key and then use it to decrypt the message content.
-  * Required
-  *  Must be non-empty
-  */
-  EncryptedKey: string;
-
-  /**
-  * The nonce used in the encryption of the AES key for this recipient. This should be a unique value for each encrypted key to ensure security. The server will store this nonce along with the encrypted key and deliver it to the recipient, allowing them to use it in the decryption process. The nonce should be generated securely (e.g., using a cryptographically secure random number generator) and should be of 12 bytes (96 bits) in length for AES-256-GCM encryption.
-  * Required
-  *  Must be non-empty
-  */
-  EncryptedKeyNonce: string;
-
-  /**
-  * An ephemeral public key generated by the sender for this message, used in the encryption process (X25519).
-  * Required
-  *  Must be non-empty
-  */
-  EphemeralPublicKey: string;
-
-  /**
-  * The unique identifier of the public key that was used to encrypt the message for this recipient. This should correspond to a KeyId returned by the server when the client added their public keys.
-  * Required
-  *  Must be non-empty
-  */
-  KeyId: string;
-
-}
-
-
-
-
-export type EditMessageForwardFederationRequestAuthParams = {
-  
-  
-  /**
-  * Required Authentication Method
-  * Source: header "Authorization"
-  *  Description: Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint. 
-  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
-  */
-  Authorization?: string;
-  
-  
-
-  
-};
-
-
-
-export function ValidateEditMessageForwardFederationRequest(req: EditMessageForwardFederationRequest) : IIMPError | null {
-  if (!req) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
-  }
-
-  
-  // Validate request body
-  const bodyValidationError = ValidateEditMessageForwardFederationRequestBody(req.Body);
-  if (bodyValidationError) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Invalid request body: " + bodyValidationError.message, bodyValidationError);
-  }
-  
-
-  
-  
-  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
-  }
-  
-  
-
-  
-
-  return null;
-}
-
-
-function ValidateEditMessageForwardFederationRequestBody(o: EditMessageForwardFederationRequestBody) : IIMPError | null {
-  
-  
-  
-  if (o.SenderUserId.trim() === "") {
-    throw new Error("Field 'SenderUserId' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  
-  ValidateEditMessageForwardFederationRequestBodyUpdatedMessage(o.UpdatedMessage);
-  
-  
-  
-  return null;
-}
-
-function ValidateEditMessageForwardFederationRequestBodyUpdatedMessage(o: EditMessageForwardFederationRequestBodyUpdatedMessage) : IIMPError | null {
-  
-  
-  
-  
-  ValidateEditMessageForwardFederationRequestBodyUpdatedMessageMessageContent(o.MessageContent);
-  
-  
-  
-  return null;
-}
-
-function ValidateEditMessageForwardFederationRequestBodyUpdatedMessageMessageContent(o: EditMessageForwardFederationRequestBodyUpdatedMessageMessageContent) : IIMPError | null {
-  
-  
-  
-  if (o.Content.trim() === "") {
-    throw new Error("Field 'Content' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  if (o.EncryptionData.length === 0) {
-    throw new Error("Field 'EncryptionData' must be non-empty");
-  }
-  
-  
-  
-  for (let idx = 0; idx < o.EncryptionData.length; idx++) {
-    const item = o.EncryptionData[idx];
-    ValidateEditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItem(item);
-  }
-  
-  
-  
-  
-  if (o.Nonce.trim() === "") {
-    throw new Error("Field 'Nonce' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  if (o.Timestamp.trim() === "") {
-    throw new Error("Field 'Timestamp' must be non-empty");
-  }
-  
-  
-  
-  
-  return null;
-}
-
-function ValidateEditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItem(o: EditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItem) : IIMPError | null {
-  
-  
-  
-  
-  ValidateEditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItemEncryption(o.Encryption);
-  
-  
-  
-  
-  
-  if (o.RecipientId.trim() === "") {
-    throw new Error("Field 'RecipientId' must be non-empty");
-  }
-  
-  
-  
-  
-  return null;
-}
-
-function ValidateEditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItemEncryption(o: EditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItemEncryption) : IIMPError | null {
-  
-  
-  
-  if (o.EncryptedKey.trim() === "") {
-    throw new Error("Field 'EncryptedKey' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  if (o.EncryptedKeyNonce.trim() === "") {
-    throw new Error("Field 'EncryptedKeyNonce' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  if (o.EphemeralPublicKey.trim() === "") {
-    throw new Error("Field 'EphemeralPublicKey' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  if (o.KeyId.trim() === "") {
-    throw new Error("Field 'KeyId' must be non-empty");
-  }
-  
-  
-  
-  
-  return null;
-}
-
-
-
-
-
-
-export type EditMessageForwardFederation200Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewEditMessageForwardFederation200Response(resp: Response): Promise<EditMessageForwardFederation200Response> {
-  var result = {} as EditMessageForwardFederation200Response;
-
-  
-
-  
-  return result
-}
-
-
-export type EditMessageForwardFederation400Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewEditMessageForwardFederation400Response(resp: Response): Promise<EditMessageForwardFederation400Response> {
-  var result = {} as EditMessageForwardFederation400Response;
-
-  
-
-  
-  return result
-}
-
-
-export type EditMessageForwardFederation401Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewEditMessageForwardFederation401Response(resp: Response): Promise<EditMessageForwardFederation401Response> {
-  var result = {} as EditMessageForwardFederation401Response;
-
-  
-
-  
-  return result
-}
-
-
-export type EditMessageForwardFederation403Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewEditMessageForwardFederation403Response(resp: Response): Promise<EditMessageForwardFederation403Response> {
-  var result = {} as EditMessageForwardFederation403Response;
-
-  
-
-  
-  return result
-}
-
-
-export type EditMessageForwardFederation404Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewEditMessageForwardFederation404Response(resp: Response): Promise<EditMessageForwardFederation404Response> {
-  var result = {} as EditMessageForwardFederation404Response;
-
-  
-
-  
-  return result
-}
-
-
-export type EditMessageForwardFederation500Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewEditMessageForwardFederation500Response(resp: Response): Promise<EditMessageForwardFederation500Response> {
-  var result = {} as EditMessageForwardFederation500Response;
-
-  
-
-  
-  return result
-}
-
-
-
-
-const FetchAttachmentBytesRequestHTTPMethod = "GET";
-const FetchAttachmentBytesRequestRoutePath   = "/api/client/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes";
-
-/**
- * Fetch the bytes of an attachment for a message in a conversation. This is a NOOP endpoint for documentation, since the actual fetching of the attachment bytes is to be done by the client.
- */
-export type FetchAttachmentBytesRequest = {
-
-  /**
-  * Source: path parameter "{conversationId}"
-  
-  * The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
-  * 
-  * Required
-  */
-  ConversationId: string;
-
-
-  /**
-  * Source: path parameter "{messageId}"
-  
-  * The unique identifier of the message that the attachment belongs to. This is typically a UUIDv7.
-  * 
-  * Required
-  */
-  MessageId: string;
-
-
-  /**
-  * Source: path parameter "{attachmentId}"
-  
-  * The unique identifier of the attachment to fetch. This is typically a UUIDv7 and should correspond to an attachment that was previously uploaded to the server using the NewAttachment endpoint.
-  * 
-  * Required
-  */
-  AttachmentId: string;
-
-
-
-
-
-  /**
-  * Authentication parameters
-  */
-  Auth: FetchAttachmentBytesRequestAuthParams;
-
-
-}
-
-
-
-
-export type FetchAttachmentBytesRequestAuthParams = {
-  
-  
-  /**
-  * Required Authentication Method
-  * Source: header "Authorization"
-  *  Description: A token used to authenticate the client session. This token is obtained after a successful login and must be included in the header of subsequent requests to access protected resources. 
-  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
-  */
-  Authorization?: string;
-  
-  
-
-  
-};
-
-
-
-export function ValidateFetchAttachmentBytesRequest(req: FetchAttachmentBytesRequest) : IIMPError | null {
-  if (!req) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
-  }
-
-  
-
-  
-  
-  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
-  }
-  
-  
-
-  
-
-  return null;
-}
-
-
-
-
-
-
-
-export type FetchAttachmentBytes200Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewFetchAttachmentBytes200Response(resp: Response): Promise<FetchAttachmentBytes200Response> {
-  var result = {} as FetchAttachmentBytes200Response;
-
-  
-
-  
-  return result
-}
-
-
-export type FetchAttachmentBytes400Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewFetchAttachmentBytes400Response(resp: Response): Promise<FetchAttachmentBytes400Response> {
-  var result = {} as FetchAttachmentBytes400Response;
-
-  
-
-  
-  return result
-}
-
-
-export type FetchAttachmentBytes401Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewFetchAttachmentBytes401Response(resp: Response): Promise<FetchAttachmentBytes401Response> {
-  var result = {} as FetchAttachmentBytes401Response;
-
-  
-
-  
-  return result
-}
-
-
-export type FetchAttachmentBytes403Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewFetchAttachmentBytes403Response(resp: Response): Promise<FetchAttachmentBytes403Response> {
-  var result = {} as FetchAttachmentBytes403Response;
-
-  
-
-  
-  return result
-}
-
-
-export type FetchAttachmentBytes404Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewFetchAttachmentBytes404Response(resp: Response): Promise<FetchAttachmentBytes404Response> {
-  var result = {} as FetchAttachmentBytes404Response;
-
-  
-
-  
-  return result
-}
-
-
-export type FetchAttachmentBytes500Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewFetchAttachmentBytes500Response(resp: Response): Promise<FetchAttachmentBytes500Response> {
-  var result = {} as FetchAttachmentBytes500Response;
-
-  
-
-  
-  return result
-}
-
-
-
-
-const FetchAttachmentBytesFederationRequestHTTPMethod = "GET";
-const FetchAttachmentBytesFederationRequestRoutePath   = "/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes";
-
-/**
- * \"FEDERATION\" Fetch the bytes of an attachment from another server. This is a noop endpoint for documentation purposes, the server should implement fetching the actual bytes using the provided endpoint. Server must implement this, requesting server needs to fetch the bytes NOT using the SDK.
- */
-export type FetchAttachmentBytesFederationRequest = {
-
-  /**
-  * Source: path parameter "{attachmentId}"
-  
-  * Unique identifier of the attachment to fetch.
-  * 
-  * Required
-  */
-  AttachmentId: string;
-
-
-  /**
-  * Source: path parameter "{messageId}"
-  
-  * Unique identifier of the message that the attachment belongs to.
-  * 
-  * Required
-  */
-  MessageId: string;
-
-
-  /**
-  * Source: path parameter "{conversationId}"
-  
-  * Unique identifier of the conversation that the message belongs to.
-  * 
-  * Required
-  */
-  ConversationId: string;
-
-
-
-
-
-  /**
-  * Authentication parameters
-  */
-  Auth: FetchAttachmentBytesFederationRequestAuthParams;
-
-
-}
-
-
-
-
-export type FetchAttachmentBytesFederationRequestAuthParams = {
-  
-  
-  /**
-  * Required Authentication Method
-  * Source: header "Authorization"
-  *  Description: Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint. 
-  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
-  */
-  Authorization?: string;
-  
-  
-
-  
-};
-
-
-
-export function ValidateFetchAttachmentBytesFederationRequest(req: FetchAttachmentBytesFederationRequest) : IIMPError | null {
-  if (!req) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
-  }
-
-  
-
-  
-  
-  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
-  }
-  
-  
-
-  
-
-  return null;
-}
-
-
-
-
-
-
-
-export type FetchAttachmentBytesFederation200Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewFetchAttachmentBytesFederation200Response(resp: Response): Promise<FetchAttachmentBytesFederation200Response> {
-  var result = {} as FetchAttachmentBytesFederation200Response;
-
-  
-
-  
-  return result
-}
-
-
-export type FetchAttachmentBytesFederation400Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewFetchAttachmentBytesFederation400Response(resp: Response): Promise<FetchAttachmentBytesFederation400Response> {
-  var result = {} as FetchAttachmentBytesFederation400Response;
-
-  
-
-  
-  return result
-}
-
-
-export type FetchAttachmentBytesFederation401Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewFetchAttachmentBytesFederation401Response(resp: Response): Promise<FetchAttachmentBytesFederation401Response> {
-  var result = {} as FetchAttachmentBytesFederation401Response;
-
-  
-
-  
-  return result
-}
-
-
-export type FetchAttachmentBytesFederation403Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewFetchAttachmentBytesFederation403Response(resp: Response): Promise<FetchAttachmentBytesFederation403Response> {
-  var result = {} as FetchAttachmentBytesFederation403Response;
-
-  
-
-  
-  return result
-}
-
-
-export type FetchAttachmentBytesFederation404Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewFetchAttachmentBytesFederation404Response(resp: Response): Promise<FetchAttachmentBytesFederation404Response> {
-  var result = {} as FetchAttachmentBytesFederation404Response;
-
-  
-
-  
-  return result
-}
-
-
-export type FetchAttachmentBytesFederation500Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewFetchAttachmentBytesFederation500Response(resp: Response): Promise<FetchAttachmentBytesFederation500Response> {
-  var result = {} as FetchAttachmentBytesFederation500Response;
-
-  
-
-  
-  return result
-}
-
-
-
-
 const GetJWKSStoreRequestHTTPMethod = "GET";
 const GetJWKSStoreRequestRoutePath   = "/.well-known/iimp/jwks";
 
@@ -2237,7 +1768,7 @@ export async function NewGetJWKSStore500Response(resp: Response): Promise<GetJWK
 
 
 const GetUserInfoFederationRequestHTTPMethod = "GET";
-const GetUserInfoFederationRequestRoutePath   = "/api/federation/users/{userId}";
+const GetUserInfoFederationRequestRoutePath   = "/iimp/api/federation/users/{userId}";
 
 /**
  * \"FEDERATION\" Retrieve information about a user for federation purposes. This endpoint is used by other servers to fetch details about a user, such as their display name and more.
@@ -2426,7 +1957,7 @@ const GetUserPublicKeyRequestHTTPMethod = "GET";
 const GetUserPublicKeyRequestRoutePath   = "/.well-known/iimp/keys/users/{userId}";
 
 /**
- * Retrieve the public key associated with a specific user.
+ * Retrieve the latest/most recent public key associated with a specific user.
  */
 export type GetUserPublicKeyRequest = {
 
@@ -2501,7 +2032,7 @@ export type GetUserPublicKey200ResponseBody = {
   PublicKey: string;
 
   /**
-  * Timestamp indicating when the public key was uploaded, in ISO 8601 format.
+  * Timestamp indicating when the public key was uploaded, in RFC3339 format.
   * Required
   *  Must be non-empty
   */
@@ -2531,6 +2062,25 @@ export async function NewGetUserPublicKey200Response(resp: Response): Promise<Ge
   } catch (err) {
     throw new IIMPError(IIMPErrorReasonDecodeError, "Failed to decode response body", err instanceof Error ? err : new Error(String(err)));
   }
+  
+  return result
+}
+
+
+export type GetUserPublicKey400Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewGetUserPublicKey400Response(resp: Response): Promise<GetUserPublicKey400Response> {
+  var result = {} as GetUserPublicKey400Response;
+
+  
+
   
   return result
 }
@@ -2665,7 +2215,7 @@ export type GetUserPublicKeyById200ResponseBody = {
   PublicKey: string;
 
   /**
-  * Timestamp indicating when the public key was uploaded, in ISO 8601 format.
+  * Timestamp indicating when the public key was uploaded, in RFC3339 format.
   * Required
   *  Must be non-empty
   */
@@ -2695,6 +2245,25 @@ export async function NewGetUserPublicKeyById200Response(resp: Response): Promis
   } catch (err) {
     throw new IIMPError(IIMPErrorReasonDecodeError, "Failed to decode response body", err instanceof Error ? err : new Error(String(err)));
   }
+  
+  return result
+}
+
+
+export type GetUserPublicKeyById400Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewGetUserPublicKeyById400Response(resp: Response): Promise<GetUserPublicKeyById400Response> {
+  var result = {} as GetUserPublicKeyById400Response;
+
+  
+
   
   return result
 }
@@ -2741,7 +2310,7 @@ export async function NewGetUserPublicKeyById500Response(resp: Response): Promis
 
 
 const LoginRequestHTTPMethod = "POST";
-const LoginRequestRoutePath   = "/api/client/login";
+const LoginRequestRoutePath   = "/iimp/api/client/login";
 
 /**
  * Authenticate a user and establish a session.
@@ -2837,6 +2406,45 @@ export type Login200Response = {
   
 
   
+  /**
+   * Response body
+   */
+  Body: Login200ResponseBody;
+  
+}
+
+
+
+export type Login200ResponseBody = {
+  
+  /**
+  * A new token used to refresh the session token when it expires. Previous refresh tokens are invalidated when a new refresh token is issued.
+  * Required
+  *  Must be non-empty
+  */
+  RefreshToken: string;
+
+  /**
+  * The timestamp of when the refresh token expires. Format => RFC3339
+  * Required
+  * 
+  */
+  RefreshTokenExpiry: string;
+
+  /**
+  * A new token used to authenticate the client session. This token must be included in the header of subsequent requests to access protected resources.
+  * Required
+  *  Must be non-empty
+  */
+  SessionToken: string;
+
+  /**
+  * The timestamp of when the session token expires. Format => RFC3339
+  * Required
+  * 
+  */
+  SessionTokenExpiry: string;
+
 }
 
 
@@ -2847,6 +2455,13 @@ export async function NewLogin200Response(resp: Response): Promise<Login200Respo
 
   
 
+  
+  try {
+    const body = await resp.json();
+    result.Body = body;
+  } catch (err) {
+    throw new IIMPError(IIMPErrorReasonDecodeError, "Failed to decode response body", err instanceof Error ? err : new Error(String(err)));
+  }
   
   return result
 }
@@ -2912,7 +2527,7 @@ export async function NewLogin500Response(resp: Response): Promise<Login500Respo
 
 
 const LogoutRequestHTTPMethod = "POST";
-const LogoutRequestRoutePath   = "/api/client/logout";
+const LogoutRequestRoutePath   = "/iimp/api/client/logout";
 
 /**
  * Log out the current user and invalidate the session.
@@ -2996,6 +2611,25 @@ export async function NewLogout204Response(resp: Response): Promise<Logout204Res
 }
 
 
+export type Logout400Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewLogout400Response(resp: Response): Promise<Logout400Response> {
+  var result = {} as Logout400Response;
+
+  
+
+  
+  return result
+}
+
+
 export type Logout401Response = {
   
 
@@ -3037,7 +2671,7 @@ export async function NewLogout500Response(resp: Response): Promise<Logout500Res
 
 
 const MessageFederationRequestHTTPMethod = "POST";
-const MessageFederationRequestRoutePath   = "/api/federation/conversations/{conversationId}/messages";
+const MessageFederationRequestRoutePath   = "/iimp/api/federation/conversations/{conversationId}/messages";
 
 /**
  * \"FEDERATION\" Send a new message/update to an existing message model to a conversation from another server. This endpoint is used by other servers to send messages to a conversation that includes users from the local server. The request will include details about the message and its sender. Upsert operation must be performed by the receiving server.
@@ -3079,7 +2713,7 @@ export type MessageFederationRequestBody = {
   * Optional
   * 
   */
-  Attachments: Array<string>;
+  Attachments: Array<MessageFederationRequestBodyAttachmentsItem>;
 
   /**
   * A list of message contents for the message, ordered by their version in Ascending Order. The original message sent by the client will have version 1. Each time the message is edited, a new MessageContent object is added to this list with the version number incremented by 1. This allows the server and clients to maintain a history of edits for each message, enabling features such as edit history viewing and audit trails.
@@ -3089,7 +2723,7 @@ export type MessageFederationRequestBody = {
   Contents: Array<MessageFederationRequestBodyContentsItem>;
 
   /**
-  * The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+  * The unique identifier of the conversation that the message belongs to.
   * Required
   *  Must be non-empty
   */
@@ -3103,7 +2737,7 @@ export type MessageFederationRequestBody = {
   IsRedacted: boolean;
 
   /**
-  * A unique identifier for the message, typically a UUIDv7.
+  * A unique identifier for the message.
   * Required
   *  Must be non-empty
   */
@@ -3117,7 +2751,7 @@ export type MessageFederationRequestBody = {
   SenderUserId: string;
 
   /**
-  * The timestamp when the message was originally sent. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message was sent, which can be useful for ordering messages and displaying timestamps in the client applications.
+  * The timestamp when the message was originally sent. Format => RFC3339. This field is included to provide context about when the message was sent, which can be useful for ordering messages and displaying timestamps in the client applications.
   * Required
   *  Must be non-empty
   */
@@ -3129,6 +2763,47 @@ export type MessageFederationRequestBody = {
   *  Must be non-empty
   */
   UserSpecificData: Array<MessageFederationRequestBodyUserSpecificDataItem>;
+
+}
+
+
+
+export type MessageFederationRequestBodyAttachmentsItem = {
+  
+  /**
+  * The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
+  * Required
+  *  Must be non-empty
+  */
+  ContentType: string;
+
+  /**
+  * A hash of the attachment file content (SHA-256 hash) used for integrity verification. The server can use this hash to verify that the attachment file has not been tampered with during storage or transmission.
+  * Required
+  *  Must be non-empty
+  */
+  FileHash: string;
+
+  /**
+  * A unique identifier for the attachment. Sender's server generates this ID when the attachment is uploaded and returns it to the sender client, which then includes it in the message payload when sending a message with attachments. The server will store the attachment and deliver it to the recipients along with the message content.
+  * Required
+  *  Must be non-empty
+  */
+  FileId: string;
+
+  /**
+  * The original filename of the attachment.
+  * Required
+  *  Must be non-empty
+  */
+  Filename: string;
+
+  /**
+  * The size of the attachment in bytes. The server may enforce a maximum attachment size (1000MB) and reject attachments that exceed this limit.
+  * Required
+  * 
+  */
+  Size: number;
 
 }
 
@@ -3164,7 +2839,7 @@ export type MessageFederationRequestBodyContentsItemMessageContent = {
   Content: string;
 
   /**
-  * Encryption details for the recipients of the message.
+  * Encryption details for the recipients of the message. The sender client should not include details for participants of a convo where RemovedAt != nil.
   * Required
   *  Must be non-empty
   */
@@ -3178,7 +2853,7 @@ export type MessageFederationRequestBodyContentsItemMessageContent = {
   Nonce: string;
 
   /**
-  * The timestamp when the message content was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
+  * The timestamp when the message content was created. Format => RFC3339. This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
   * Required
   *  Must be non-empty
   */
@@ -3245,7 +2920,7 @@ export type MessageFederationRequestBodyContentsItemMessageContentEncryptionData
 export type MessageFederationRequestBodyUserSpecificDataItem = {
   
   /**
-  * The timestamp when the recipient reacted to the message. This field is null if the recipient has not reacted to the message yet. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when each reaction was made for the message.
+  * The timestamp when the recipient reacted to the message. This field is null if the recipient has not reacted to the message yet. Format => RFC3339. This field is included to provide context about when each reaction was made for the message.
   * Optional
   * 
   */
@@ -3259,7 +2934,7 @@ export type MessageFederationRequestBodyUserSpecificDataItem = {
   Reaction: string | null;
 
   /**
-  * The timestamp when the recipient read the message. This field is null if the recipient has not read the message yet. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide read receipt functionality, allowing the sender to know when each recipient has read the message.
+  * The timestamp when the recipient read the message. This field is null if the recipient has not read the message yet. Format => RFC3339. This field is included to provide read receipt functionality, allowing the sender to know when each recipient has read the message.
   * Optional
   * 
   */
@@ -3325,6 +3000,11 @@ export function ValidateMessageFederationRequest(req: MessageFederationRequest) 
 function ValidateMessageFederationRequestBody(o: MessageFederationRequestBody) : IIMPError | null {
   
   
+  
+  for (let idx = 0; idx < o.Attachments.length; idx++) {
+    const item = o.Attachments[idx];
+    ValidateMessageFederationRequestBodyAttachmentsItem(item);
+  }
   
   
   
@@ -3392,6 +3072,50 @@ function ValidateMessageFederationRequestBody(o: MessageFederationRequestBody) :
     const item = o.UserSpecificData[idx];
     ValidateMessageFederationRequestBodyUserSpecificDataItem(item);
   }
+  
+  
+  return null;
+}
+
+function ValidateMessageFederationRequestBodyAttachmentsItem(o: MessageFederationRequestBodyAttachmentsItem) : IIMPError | null {
+  
+  
+  
+  if (o.ContentType.trim() === "") {
+    throw new Error("Field 'ContentType' must be non-empty");
+  }
+  
+  
+  
+  
+  
+  
+  if (o.FileHash.trim() === "") {
+    throw new Error("Field 'FileHash' must be non-empty");
+  }
+  
+  
+  
+  
+  
+  
+  if (o.FileId.trim() === "") {
+    throw new Error("Field 'FileId' must be non-empty");
+  }
+  
+  
+  
+  
+  
+  
+  if (o.Filename.trim() === "") {
+    throw new Error("Field 'Filename' must be non-empty");
+  }
+  
+  
+  
+  
+  
   
   
   return null;
@@ -3664,735 +3388,8 @@ export async function NewMessageFederation500Response(resp: Response): Promise<M
 
 
 
-const MessageForwardFederationRequestHTTPMethod = "POST";
-const MessageForwardFederationRequestRoutePath   = "/api/federation/conversations/{conversationId}/messages/forward";
-
-/**
- * \"FEDERATION\" Forward an existing message to a conversation from another server.
- */
-export type MessageForwardFederationRequest = {
-
-  /**
-  * Source: path parameter "{conversationId}"
-  
-  * Unique identifier of the conversation to forward the message to.
-  * 
-  * Required
-  */
-  ConversationId: string;
-
-
-
-
-
-  /**
-  * Authentication parameters
-  */
-  Auth: MessageForwardFederationRequestAuthParams;
-
-
-  /**
-  * Request body
-  */
-  Body: MessageForwardFederationRequestBody;
-
-}
-
-
-
-export type MessageForwardFederationRequestBody = {
-  
-  /**
-  * Message details.
-  * Required
-  * 
-  */
-  OriginalMessageRequest: MessageForwardFederationRequestBodyOriginalMessageRequest;
-
-  /**
-  * User ID of the sender of the forwarded message. This should be in the format localpart@domain and must belong to the requesting server.
-  * Required
-  *  Must be non-empty
-  */
-  SenderUserId: string;
-
-}
-
-
-
-export type MessageForwardFederationRequestBodyOriginalMessageRequest = {
-  
-  /**
-  * An optional list of attachments to be included with the message. Each attachment can be a file, image, or other media type that is associated with the message. The server will store the attachments and deliver them to the recipients along with the message content.
-  * Optional
-  * 
-  */
-  Attachments: Array<string>;
-
-  /**
-  * The content of the message to be sent in the conversation. The content should be encrypted using an AES key, and the AES key should be encrypted for each recipient using their respective public keys. The server will store the encrypted message content and the encrypted keys for each recipient, allowing the recipients to decrypt the AES key using their private keys and then use it to decrypt the message content.
-  * Required
-  * 
-  */
-  MessageContent: MessageForwardFederationRequestBodyOriginalMessageRequestMessageContent;
-
-}
-
-
-
-export type MessageForwardFederationRequestBodyOriginalMessageRequestMessageContent = {
-  
-  /**
-  * The content of the message to be sent in the conversation. The content should be encrypted using an AES key, and the AES key should be encrypted for each recipient using their respective public keys. The server will store the encrypted message content and the encrypted keys for each recipient, allowing the recipients to decrypt the AES key using their private keys and then use it to decrypt the message content.
-  * Required
-  *  Must be non-empty
-  */
-  Content: string;
-
-  /**
-  * Encryption details for the recipients of the message.
-  * Required
-  *  Must be non-empty
-  */
-  EncryptionData: Array<MessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItem>;
-
-  /**
-  * The nonce (or initialization vector) used in the AES encryption of the message content. This should be a unique value for each message encrypted with the same AES key to ensure security. The nonce is required for the decryption process, as it is used along with the AES key to decrypt the message content. The server will store the nonce along with the encrypted message content and deliver it to the recipients, allowing them to use it in the decryption process. The nonce should be generated securely (e.g., using a cryptographically secure random number generator) and should be of 12 bytes (96 bits) in length for AES-256-GCM encryption.
-  * Required
-  *  Must be non-empty
-  */
-  Nonce: string;
-
-  /**
-  * The timestamp when the message content was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
-  * Required
-  *  Must be non-empty
-  */
-  Timestamp: string;
-
-}
-
-
-
-export type MessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItem = {
-  
-  /**
-  * Encryption details for a recipient of the message.
-  * Required
-  * 
-  */
-  Encryption: MessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItemEncryption;
-
-  /**
-  * User ID of the recipient of the message. (localpart@domain). This field is included to associate the encryption details with the specific recipient, allowing the server to deliver the correct encrypted key and nonce to each recipient along with the encrypted message content.
-  * Required
-  *  Must be non-empty
-  */
-  RecipientId: string;
-
-}
-
-
-
-export type MessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItemEncryption = {
-  
-  /**
-  * The AES key used to encrypt the message content, encrypted with the recipient's public key using an asymmetric encryption algorithm (X25519 + HKDF). The server will store this encrypted key and deliver it to the recipient along with the encrypted message content, allowing the recipient to decrypt the AES key using their private key and then use it to decrypt the message content.
-  * Required
-  *  Must be non-empty
-  */
-  EncryptedKey: string;
-
-  /**
-  * The nonce used in the encryption of the AES key for this recipient. This should be a unique value for each encrypted key to ensure security. The server will store this nonce along with the encrypted key and deliver it to the recipient, allowing them to use it in the decryption process. The nonce should be generated securely (e.g., using a cryptographically secure random number generator) and should be of 12 bytes (96 bits) in length for AES-256-GCM encryption.
-  * Required
-  *  Must be non-empty
-  */
-  EncryptedKeyNonce: string;
-
-  /**
-  * An ephemeral public key generated by the sender for this message, used in the encryption process (X25519).
-  * Required
-  *  Must be non-empty
-  */
-  EphemeralPublicKey: string;
-
-  /**
-  * The unique identifier of the public key that was used to encrypt the message for this recipient. This should correspond to a KeyId returned by the server when the client added their public keys.
-  * Required
-  *  Must be non-empty
-  */
-  KeyId: string;
-
-}
-
-
-
-
-export type MessageForwardFederationRequestAuthParams = {
-  
-  
-  /**
-  * Required Authentication Method
-  * Source: header "Authorization"
-  *  Description: Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint. 
-  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
-  */
-  Authorization?: string;
-  
-  
-
-  
-};
-
-
-
-export function ValidateMessageForwardFederationRequest(req: MessageForwardFederationRequest) : IIMPError | null {
-  if (!req) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
-  }
-
-  
-  // Validate request body
-  const bodyValidationError = ValidateMessageForwardFederationRequestBody(req.Body);
-  if (bodyValidationError) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Invalid request body: " + bodyValidationError.message, bodyValidationError);
-  }
-  
-
-  
-  
-  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
-  }
-  
-  
-
-  
-
-  return null;
-}
-
-
-function ValidateMessageForwardFederationRequestBody(o: MessageForwardFederationRequestBody) : IIMPError | null {
-  
-  
-  
-  
-  ValidateMessageForwardFederationRequestBodyOriginalMessageRequest(o.OriginalMessageRequest);
-  
-  
-  
-  
-  
-  if (o.SenderUserId.trim() === "") {
-    throw new Error("Field 'SenderUserId' must be non-empty");
-  }
-  
-  
-  
-  
-  return null;
-}
-
-function ValidateMessageForwardFederationRequestBodyOriginalMessageRequest(o: MessageForwardFederationRequestBodyOriginalMessageRequest) : IIMPError | null {
-  
-  
-  
-  
-  
-  
-  
-  ValidateMessageForwardFederationRequestBodyOriginalMessageRequestMessageContent(o.MessageContent);
-  
-  
-  
-  return null;
-}
-
-function ValidateMessageForwardFederationRequestBodyOriginalMessageRequestMessageContent(o: MessageForwardFederationRequestBodyOriginalMessageRequestMessageContent) : IIMPError | null {
-  
-  
-  
-  if (o.Content.trim() === "") {
-    throw new Error("Field 'Content' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  if (o.EncryptionData.length === 0) {
-    throw new Error("Field 'EncryptionData' must be non-empty");
-  }
-  
-  
-  
-  for (let idx = 0; idx < o.EncryptionData.length; idx++) {
-    const item = o.EncryptionData[idx];
-    ValidateMessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItem(item);
-  }
-  
-  
-  
-  
-  if (o.Nonce.trim() === "") {
-    throw new Error("Field 'Nonce' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  if (o.Timestamp.trim() === "") {
-    throw new Error("Field 'Timestamp' must be non-empty");
-  }
-  
-  
-  
-  
-  return null;
-}
-
-function ValidateMessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItem(o: MessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItem) : IIMPError | null {
-  
-  
-  
-  
-  ValidateMessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItemEncryption(o.Encryption);
-  
-  
-  
-  
-  
-  if (o.RecipientId.trim() === "") {
-    throw new Error("Field 'RecipientId' must be non-empty");
-  }
-  
-  
-  
-  
-  return null;
-}
-
-function ValidateMessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItemEncryption(o: MessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItemEncryption) : IIMPError | null {
-  
-  
-  
-  if (o.EncryptedKey.trim() === "") {
-    throw new Error("Field 'EncryptedKey' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  if (o.EncryptedKeyNonce.trim() === "") {
-    throw new Error("Field 'EncryptedKeyNonce' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  if (o.EphemeralPublicKey.trim() === "") {
-    throw new Error("Field 'EphemeralPublicKey' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  if (o.KeyId.trim() === "") {
-    throw new Error("Field 'KeyId' must be non-empty");
-  }
-  
-  
-  
-  
-  return null;
-}
-
-
-
-
-
-
-export type MessageForwardFederation200Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewMessageForwardFederation200Response(resp: Response): Promise<MessageForwardFederation200Response> {
-  var result = {} as MessageForwardFederation200Response;
-
-  
-
-  
-  return result
-}
-
-
-export type MessageForwardFederation400Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewMessageForwardFederation400Response(resp: Response): Promise<MessageForwardFederation400Response> {
-  var result = {} as MessageForwardFederation400Response;
-
-  
-
-  
-  return result
-}
-
-
-export type MessageForwardFederation401Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewMessageForwardFederation401Response(resp: Response): Promise<MessageForwardFederation401Response> {
-  var result = {} as MessageForwardFederation401Response;
-
-  
-
-  
-  return result
-}
-
-
-export type MessageForwardFederation403Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewMessageForwardFederation403Response(resp: Response): Promise<MessageForwardFederation403Response> {
-  var result = {} as MessageForwardFederation403Response;
-
-  
-
-  
-  return result
-}
-
-
-export type MessageForwardFederation404Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewMessageForwardFederation404Response(resp: Response): Promise<MessageForwardFederation404Response> {
-  var result = {} as MessageForwardFederation404Response;
-
-  
-
-  
-  return result
-}
-
-
-export type MessageForwardFederation500Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewMessageForwardFederation500Response(resp: Response): Promise<MessageForwardFederation500Response> {
-  var result = {} as MessageForwardFederation500Response;
-
-  
-
-  
-  return result
-}
-
-
-
-
-const NewAttachmentRequestHTTPMethod = "POST";
-const NewAttachmentRequestRoutePath   = "/api/client/attachments";
-
-/**
- * Upload an attachment to be included with a message.
- */
-export type NewAttachmentRequest = {
-
-
-
-
-  /**
-  * Authentication parameters
-  */
-  Auth: NewAttachmentRequestAuthParams;
-
-
-  /**
-  * Request body
-  */
-  Body: NewAttachmentRequestBody;
-
-}
-
-
-
-export type NewAttachmentRequestBody = {
-  
-  /**
-  * The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
-  * Required
-  *  Must be non-empty
-  */
-  ContentType: string;
-
-  /**
-  * The original filename of the attachment.
-  * Required
-  *  Must be non-empty
-  */
-  Filename: string;
-
-  /**
-  * The size of the attachment in bytes. The server may enforce a maximum attachment size.
-  * Required
-  * 
-  */
-  Size: number;
-
-}
-
-
-
-
-export type NewAttachmentRequestAuthParams = {
-  
-  
-  /**
-  * Required Authentication Method
-  * Source: header "Authorization"
-  *  Description: A token used to authenticate the client session. This token is obtained after a successful login and must be included in the header of subsequent requests to access protected resources. 
-  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
-  */
-  Authorization?: string;
-  
-  
-
-  
-};
-
-
-
-export function ValidateNewAttachmentRequest(req: NewAttachmentRequest) : IIMPError | null {
-  if (!req) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
-  }
-
-  
-  // Validate request body
-  const bodyValidationError = ValidateNewAttachmentRequestBody(req.Body);
-  if (bodyValidationError) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Invalid request body: " + bodyValidationError.message, bodyValidationError);
-  }
-  
-
-  
-  
-  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
-  }
-  
-  
-
-  
-
-  return null;
-}
-
-
-function ValidateNewAttachmentRequestBody(o: NewAttachmentRequestBody) : IIMPError | null {
-  
-  
-  
-  if (o.ContentType.trim() === "") {
-    throw new Error("Field 'ContentType' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  if (o.Filename.trim() === "") {
-    throw new Error("Field 'Filename' must be non-empty");
-  }
-  
-  
-  
-  
-  
-  
-  
-  return null;
-}
-
-
-
-
-
-
-export type NewAttachment201Response = {
-  
-
-  
-  /**
-   * Response body
-   */
-  Body: NewAttachment201ResponseBody;
-  
-}
-
-
-
-export type NewAttachment201ResponseBody = {
-  
-  /**
-  * A unique identifier for the attachment, typically a UUIDv7. This ID can be used to reference the attachment in future operations, such as including it in a message payload when sending a message with attachments. The server will store the attachment and deliver it to the recipients along with the message content.
-  * Required
-  *  Must be non-empty
-  */
-  AttachmentId: string;
-
-}
-
-
-
-
-export async function NewNewAttachment201Response(resp: Response): Promise<NewAttachment201Response> {
-  var result = {} as NewAttachment201Response;
-
-  
-
-  
-  try {
-    const body = await resp.json();
-    result.Body = body;
-  } catch (err) {
-    throw new IIMPError(IIMPErrorReasonDecodeError, "Failed to decode response body", err instanceof Error ? err : new Error(String(err)));
-  }
-  
-  return result
-}
-
-
-export type NewAttachment400Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewNewAttachment400Response(resp: Response): Promise<NewAttachment400Response> {
-  var result = {} as NewAttachment400Response;
-
-  
-
-  
-  return result
-}
-
-
-export type NewAttachment401Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewNewAttachment401Response(resp: Response): Promise<NewAttachment401Response> {
-  var result = {} as NewAttachment401Response;
-
-  
-
-  
-  return result
-}
-
-
-export type NewAttachment413Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewNewAttachment413Response(resp: Response): Promise<NewAttachment413Response> {
-  var result = {} as NewAttachment413Response;
-
-  
-
-  
-  return result
-}
-
-
-export type NewAttachment500Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewNewAttachment500Response(resp: Response): Promise<NewAttachment500Response> {
-  var result = {} as NewAttachment500Response;
-
-  
-
-  
-  return result
-}
-
-
-
-
 const NewConversationRequestHTTPMethod = "POST";
-const NewConversationRequestRoutePath   = "/api/client/conversations";
+const NewConversationRequestRoutePath   = "/iimp/api/client/conversations";
 
 /**
  * Create a new conversation.
@@ -4521,21 +3518,14 @@ export type NewConversation201Response = {
 export type NewConversation201ResponseBodyConversationParticipantsItem = {
   
   /**
-  * The unique identifier of the conversation that the participant is part of. This is typically a UUIDv7.
-  * Required
-  *  Must be non-empty
-  */
-  ConversationId: string;
-
-  /**
-  * The timestamp when the participant joined the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+  * The timestamp when the participant joined the conversation. Format => RFC3339.
   * Required
   *  Must be non-empty
   */
   JoinedAt: string;
 
   /**
-  * The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
+  * The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => RFC3339. A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
   * Optional
   * 
   */
@@ -4562,7 +3552,7 @@ export type NewConversation201ResponseBodyConversationParticipantsItem = {
 export type NewConversation201ResponseBodyConversation = {
   
   /**
-  * A unique identifier for the conversation, typically a UUIDv7.
+  * A unique identifier for the conversation.
   * Required
   *  Must be non-empty
   */
@@ -4583,11 +3573,18 @@ export type NewConversation201ResponseBodyConversation = {
   ConversationOwnerId: string;
 
   /**
-  * The timestamp when the conversation was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+  * The timestamp when the conversation was created. Format => RFC3339.
   * Required
   *  Must be non-empty
   */
   CreatedAt: string;
+
+  /**
+  * A flag indicating whether the conversation is a Direct Message (DM) or a Group Conversation. A Direct Message conversation has exactly 2 participants (including the owner), while a Group Conversation has more than 2 participants.
+  * Required
+  * 
+  */
+  IsDM: boolean;
 
   /**
   * A list of participants in the conversation. The owner of the conversation is also included in this list. Participants can be added or removed by the owner user. Contains at least 2 participants (including the owner) for a Direct Conversation and >2 participants for a Group Conversation.
@@ -4604,10 +3601,10 @@ export type NewConversation201ResponseBody = {
   
   /**
   * Details of the created conversation.
-  * Optional
+  * Required
   * 
   */
-  Conversation: NewConversation201ResponseBodyConversation | null;
+  Conversation: NewConversation201ResponseBodyConversation;
 
 }
 
@@ -4729,7 +3726,7 @@ export async function NewNewConversation500Response(resp: Response): Promise<New
 
 
 const NewMessageRequestHTTPMethod = "POST";
-const NewMessageRequestRoutePath   = "/api/client/conversations/{conversationId}/messages";
+const NewMessageRequestRoutePath   = "/iimp/api/client/conversations/{conversationId}/messages";
 
 /**
  * Send a new message in a conversation.
@@ -4739,7 +3736,7 @@ export type NewMessageRequest = {
   /**
   * Source: path parameter "{conversationId}"
   
-  * The unique identifier of the conversation to send the message in. This is typically a UUIDv7.
+  * The unique identifier of the conversation to send the message in.
   * 
   * Required
   */
@@ -4771,7 +3768,7 @@ export type NewMessageRequestBody = {
   * Optional
   * 
   */
-  Attachments: Array<string>;
+  Attachments: Array<NewMessageRequestBodyAttachmentsItem>;
 
   /**
   * The content of the message to be sent in the conversation. The content should be encrypted using an AES key, and the AES key should be encrypted for each recipient using their respective public keys. The server will store the encrypted message content and the encrypted keys for each recipient, allowing the recipients to decrypt the AES key using their private keys and then use it to decrypt the message content.
@@ -4779,6 +3776,47 @@ export type NewMessageRequestBody = {
   * 
   */
   MessageContent: NewMessageRequestBodyMessageContent;
+
+}
+
+
+
+export type NewMessageRequestBodyAttachmentsItem = {
+  
+  /**
+  * The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
+  * Required
+  *  Must be non-empty
+  */
+  ContentType: string;
+
+  /**
+  * A hash of the attachment file content (SHA-256 hash) used for integrity verification. The server can use this hash to verify that the attachment file has not been tampered with during storage or transmission.
+  * Required
+  *  Must be non-empty
+  */
+  FileHash: string;
+
+  /**
+  * A unique identifier for the attachment. Sender's server generates this ID when the attachment is uploaded and returns it to the sender client, which then includes it in the message payload when sending a message with attachments. The server will store the attachment and deliver it to the recipients along with the message content.
+  * Required
+  *  Must be non-empty
+  */
+  FileId: string;
+
+  /**
+  * The original filename of the attachment.
+  * Required
+  *  Must be non-empty
+  */
+  Filename: string;
+
+  /**
+  * The size of the attachment in bytes. The server may enforce a maximum attachment size (1000MB) and reject attachments that exceed this limit.
+  * Required
+  * 
+  */
+  Size: number;
 
 }
 
@@ -4794,7 +3832,7 @@ export type NewMessageRequestBodyMessageContent = {
   Content: string;
 
   /**
-  * Encryption details for the recipients of the message.
+  * Encryption details for the recipients of the message. The sender client should not include details for participants of a convo where RemovedAt != nil.
   * Required
   *  Must be non-empty
   */
@@ -4808,7 +3846,7 @@ export type NewMessageRequestBodyMessageContent = {
   Nonce: string;
 
   /**
-  * The timestamp when the message content was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
+  * The timestamp when the message content was created. Format => RFC3339. This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
   * Required
   *  Must be non-empty
   */
@@ -4922,11 +3960,60 @@ function ValidateNewMessageRequestBody(o: NewMessageRequestBody) : IIMPError | n
   
   
   
+  for (let idx = 0; idx < o.Attachments.length; idx++) {
+    const item = o.Attachments[idx];
+    ValidateNewMessageRequestBodyAttachmentsItem(item);
+  }
+  
   
   
   
   
   ValidateNewMessageRequestBodyMessageContent(o.MessageContent);
+  
+  
+  
+  return null;
+}
+
+function ValidateNewMessageRequestBodyAttachmentsItem(o: NewMessageRequestBodyAttachmentsItem) : IIMPError | null {
+  
+  
+  
+  if (o.ContentType.trim() === "") {
+    throw new Error("Field 'ContentType' must be non-empty");
+  }
+  
+  
+  
+  
+  
+  
+  if (o.FileHash.trim() === "") {
+    throw new Error("Field 'FileHash' must be non-empty");
+  }
+  
+  
+  
+  
+  
+  
+  if (o.FileId.trim() === "") {
+    throw new Error("Field 'FileId' must be non-empty");
+  }
+  
+  
+  
+  
+  
+  
+  if (o.Filename.trim() === "") {
+    throw new Error("Field 'Filename' must be non-empty");
+  }
+  
+  
+  
+  
   
   
   
@@ -5050,24 +4137,6 @@ export type NewMessage201Response = {
   
 
   
-  /**
-   * Response body
-   */
-  Body: NewMessage201ResponseBody;
-  
-}
-
-
-
-export type NewMessage201ResponseBody = {
-  
-  /**
-  * A unique identifier for the message, typically a UUIDv7.
-  * Required
-  *  Must be non-empty
-  */
-  MessageId: string;
-
 }
 
 
@@ -5078,13 +4147,6 @@ export async function NewNewMessage201Response(resp: Response): Promise<NewMessa
 
   
 
-  
-  try {
-    const body = await resp.json();
-    result.Body = body;
-  } catch (err) {
-    throw new IIMPError(IIMPErrorReasonDecodeError, "Failed to decode response body", err instanceof Error ? err : new Error(String(err)));
-  }
   
   return result
 }
@@ -5187,8 +4249,245 @@ export async function NewNewMessage500Response(resp: Response): Promise<NewMessa
 
 
 
+const PullUserEventsRequestHTTPMethod = "GET";
+const PullUserEventsRequestRoutePath   = "/iimp/api/client/events";
+
+/**
+ * Fetch a list of events for the authenticated user.
+ */
+export type PullUserEventsRequest = {
+
+
+  /**
+  * Source: query parameter "cursor"
+  
+  * A cursor (for this use case, MongoDB's ObjectID) for pagination. The server will return events starting from this cursor. If not provided, the server will return all available events starting from the oldest event in the system. The response will include a next_cursor field that can be used to fetch the next page of results.
+  * 
+  * Optional
+  */
+  Cursor?: string | undefined;
+
+
+  /**
+  * Source: query parameter "limit"
+  
+  * The maximum number of events to return in the response. If not provided, the server will use a default limit (50). The server may enforce a maximum limit (100) to prevent excessively large responses.
+  * 
+  * Optional
+  */
+  Limit?: number | undefined;
+
+
+
+
+  /**
+  * Authentication parameters
+  */
+  Auth: PullUserEventsRequestAuthParams;
+
+
+}
+
+
+
+
+export type PullUserEventsRequestAuthParams = {
+  
+  
+  /**
+  * Required Authentication Method
+  * Source: header "Authorization"
+  *  Description: A token used to authenticate the client session. This token is obtained after a successful login and must be included in the header of subsequent requests to access protected resources. 
+  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
+  */
+  Authorization?: string;
+  
+  
+
+  
+};
+
+
+
+export function ValidatePullUserEventsRequest(req: PullUserEventsRequest) : IIMPError | null {
+  if (!req) {
+    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
+  }
+
+  
+
+  
+  
+  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
+    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
+  }
+  
+  
+
+  
+
+  return null;
+}
+
+
+
+
+
+
+
+export type PullUserEvents200Response = {
+  
+
+  
+  /**
+   * Response body
+   */
+  Body: PullUserEvents200ResponseBody;
+  
+}
+
+
+
+export type PullUserEvents200ResponseBodyEventsItem = {
+  
+  /**
+  * The timestamp when the event was created. Format => RFC3339.
+  * Required
+  *  Must be non-empty
+  */
+  CreatedAt: string;
+
+  /**
+  * A unique identifier for the event (Monotonically increasing per-user sequence number).
+  * Required
+  * 
+  */
+  EventId: string;
+
+  /**
+  * The type of the event (e.g., "message_received", "conversation_created", etc.). This field can be used by the client to determine how to process the event. For a full list of event types and their corresponding payload structures, refer to the IIMP Client Events documentation [here](https://github.com/iim-protocol/iimp/tree/main/Events.md).
+  * Required
+  *  Must be non-empty
+  */
+  EventType: string;
+
+  /**
+  * An optional field containing additional data related to the event. The structure of this object can vary depending on the event type and must conform to the IIMP Client Events documentation. Clients should be designed to handle different payload structures based on the event type.
+  * Optional
+  * 
+  */
+  Payload: Record<string, any> | null;
+
+  /**
+  * User ID of the user to whom the event belongs. (localpart@domain)
+  * Required
+  *  Must be non-empty
+  */
+  UserId: string;
+
+}
+
+
+
+export type PullUserEvents200ResponseBody = {
+  
+  /**
+  * A list of events for the authenticated user, if any available. The events are ordered by their EventId in Ascending Order. The server may return up to 'limit' events in the response. If there are more events available beyond the returned list, a 'next_cursor' field will be included in the response, which can be used to fetch the next page of results.
+  * Required
+  * 
+  */
+  Events: Array<PullUserEvents200ResponseBodyEventsItem>;
+
+  /**
+  * A cursor for the next page of results, if available. This field will be included in the response if there are more events available beyond the returned list.
+  * Optional
+  * 
+  */
+  NextCursor: string | null;
+
+}
+
+
+
+
+export async function NewPullUserEvents200Response(resp: Response): Promise<PullUserEvents200Response> {
+  var result = {} as PullUserEvents200Response;
+
+  
+
+  
+  try {
+    const body = await resp.json();
+    result.Body = body;
+  } catch (err) {
+    throw new IIMPError(IIMPErrorReasonDecodeError, "Failed to decode response body", err instanceof Error ? err : new Error(String(err)));
+  }
+  
+  return result
+}
+
+
+export type PullUserEvents400Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewPullUserEvents400Response(resp: Response): Promise<PullUserEvents400Response> {
+  var result = {} as PullUserEvents400Response;
+
+  
+
+  
+  return result
+}
+
+
+export type PullUserEvents401Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewPullUserEvents401Response(resp: Response): Promise<PullUserEvents401Response> {
+  var result = {} as PullUserEvents401Response;
+
+  
+
+  
+  return result
+}
+
+
+export type PullUserEvents500Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewPullUserEvents500Response(resp: Response): Promise<PullUserEvents500Response> {
+  var result = {} as PullUserEvents500Response;
+
+  
+
+  
+  return result
+}
+
+
+
+
 const ReactToMessageRequestHTTPMethod = "POST";
-const ReactToMessageRequestRoutePath   = "/api/client/conversations/{conversationId}/messages/{messageId}/react";
+const ReactToMessageRequestRoutePath   = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/react";
 
 /**
  * React to a message in a conversation.
@@ -5198,7 +4497,7 @@ export type ReactToMessageRequest = {
   /**
   * Source: path parameter "{conversationId}"
   
-  * The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+  * The unique identifier of the conversation that the message belongs to.
   * 
   * Required
   */
@@ -5208,7 +4507,7 @@ export type ReactToMessageRequest = {
   /**
   * Source: path parameter "{messageId}"
   
-  * The unique identifier of the message to react to. This is typically a UUIDv7.
+  * The unique identifier of the message to react to.
   * 
   * Required
   */
@@ -5421,285 +4720,8 @@ export async function NewReactToMessage500Response(resp: Response): Promise<Reac
 
 
 
-const ReactToMessageForwardFederationRequestHTTPMethod = "POST";
-const ReactToMessageForwardFederationRequestRoutePath   = "/api/federation/conversations/{conversationId}/messages/{messageId}/react/forward";
-
-/**
- * \"FEDERATION\" React to a message in a conversation on another server.
- */
-export type ReactToMessageForwardFederationRequest = {
-
-  /**
-  * Source: path parameter "{conversationId}"
-  
-  * Unique identifier of the conversation to react to the message in.
-  * 
-  * Required
-  */
-  ConversationId: string;
-
-
-  /**
-  * Source: path parameter "{messageId}"
-  
-  * Unique identifier of the message to react to.
-  * 
-  * Required
-  */
-  MessageId: string;
-
-
-
-
-
-  /**
-  * Authentication parameters
-  */
-  Auth: ReactToMessageForwardFederationRequestAuthParams;
-
-
-  /**
-  * Request body
-  */
-  Body: ReactToMessageForwardFederationRequestBody;
-
-}
-
-
-
-export type ReactToMessageForwardFederationRequestBody = {
-  
-  /**
-  * Original received reaction on the requesting server.
-  * Optional
-  * 
-  */
-  OriginalReaction: ReactToMessageForwardFederationRequestBodyOriginalReaction | null;
-
-  /**
-  * User ID of the user who made the reaction. This should be in the format localpart@domain and must belong to the requesting server.
-  * Required
-  *  Must be non-empty
-  */
-  ReactingUserId: string;
-
-}
-
-
-
-export type ReactToMessageForwardFederationRequestBodyOriginalReaction = {
-  
-  /**
-  * A reaction from the recipient of a message (e.g., "like", "love", "laugh", "sad", "angry", etc.). Emoji-Only field. Null to remove reaction.
-  * Optional
-  * 
-  */
-  Reaction: string | null;
-
-}
-
-
-
-
-export type ReactToMessageForwardFederationRequestAuthParams = {
-  
-  
-  /**
-  * Required Authentication Method
-  * Source: header "Authorization"
-  *  Description: Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint. 
-  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
-  */
-  Authorization?: string;
-  
-  
-
-  
-};
-
-
-
-export function ValidateReactToMessageForwardFederationRequest(req: ReactToMessageForwardFederationRequest) : IIMPError | null {
-  if (!req) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
-  }
-
-  
-  // Validate request body
-  const bodyValidationError = ValidateReactToMessageForwardFederationRequestBody(req.Body);
-  if (bodyValidationError) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Invalid request body: " + bodyValidationError.message, bodyValidationError);
-  }
-  
-
-  
-  
-  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
-  }
-  
-  
-
-  
-
-  return null;
-}
-
-
-function ValidateReactToMessageForwardFederationRequestBody(o: ReactToMessageForwardFederationRequestBody) : IIMPError | null {
-  
-  
-  
-  
-  if (o.OriginalReaction) {
-    ValidateReactToMessageForwardFederationRequestBodyOriginalReaction(o.OriginalReaction);
-  }
-  
-  
-  
-  
-  
-  if (o.ReactingUserId.trim() === "") {
-    throw new Error("Field 'ReactingUserId' must be non-empty");
-  }
-  
-  
-  
-  
-  return null;
-}
-
-function ValidateReactToMessageForwardFederationRequestBodyOriginalReaction(o: ReactToMessageForwardFederationRequestBodyOriginalReaction) : IIMPError | null {
-  
-  
-  
-  
-  return null;
-}
-
-
-
-
-
-
-export type ReactToMessageForwardFederation200Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewReactToMessageForwardFederation200Response(resp: Response): Promise<ReactToMessageForwardFederation200Response> {
-  var result = {} as ReactToMessageForwardFederation200Response;
-
-  
-
-  
-  return result
-}
-
-
-export type ReactToMessageForwardFederation400Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewReactToMessageForwardFederation400Response(resp: Response): Promise<ReactToMessageForwardFederation400Response> {
-  var result = {} as ReactToMessageForwardFederation400Response;
-
-  
-
-  
-  return result
-}
-
-
-export type ReactToMessageForwardFederation401Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewReactToMessageForwardFederation401Response(resp: Response): Promise<ReactToMessageForwardFederation401Response> {
-  var result = {} as ReactToMessageForwardFederation401Response;
-
-  
-
-  
-  return result
-}
-
-
-export type ReactToMessageForwardFederation403Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewReactToMessageForwardFederation403Response(resp: Response): Promise<ReactToMessageForwardFederation403Response> {
-  var result = {} as ReactToMessageForwardFederation403Response;
-
-  
-
-  
-  return result
-}
-
-
-export type ReactToMessageForwardFederation404Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewReactToMessageForwardFederation404Response(resp: Response): Promise<ReactToMessageForwardFederation404Response> {
-  var result = {} as ReactToMessageForwardFederation404Response;
-
-  
-
-  
-  return result
-}
-
-
-export type ReactToMessageForwardFederation500Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewReactToMessageForwardFederation500Response(resp: Response): Promise<ReactToMessageForwardFederation500Response> {
-  var result = {} as ReactToMessageForwardFederation500Response;
-
-  
-
-  
-  return result
-}
-
-
-
-
 const ReadMessageRequestHTTPMethod = "POST";
-const ReadMessageRequestRoutePath   = "/api/client/conversations/{conversationId}/messages/{messageId}/read";
+const ReadMessageRequestRoutePath   = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/read";
 
 /**
  * Mark a message as read by the authenticated user.
@@ -5709,7 +4731,7 @@ export type ReadMessageRequest = {
   /**
   * Source: path parameter "{conversationId}"
   
-  * The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+  * The unique identifier of the conversation that the message belongs to.
   * 
   * Required
   */
@@ -5719,7 +4741,7 @@ export type ReadMessageRequest = {
   /**
   * Source: path parameter "{messageId}"
   
-  * The unique identifier of the message to mark as read. This is typically a UUIDv7.
+  * The unique identifier of the message to mark as read.
   * 
   * Required
   */
@@ -5900,248 +4922,8 @@ export async function NewReadMessage500Response(resp: Response): Promise<ReadMes
 
 
 
-const ReadMessageForwardFederationRequestHTTPMethod = "POST";
-const ReadMessageForwardFederationRequestRoutePath   = "/api/federation/conversations/{conversationId}/messages/{messageId}/read/forward";
-
-/**
- * \"FEDERATION\" Mark a message as read in a conversation on another server.
- */
-export type ReadMessageForwardFederationRequest = {
-
-  /**
-  * Source: path parameter "{conversationId}"
-  
-  * Unique identifier of the conversation to mark the message as read in.
-  * 
-  * Required
-  */
-  ConversationId: string;
-
-
-  /**
-  * Source: path parameter "{messageId}"
-  
-  * Unique identifier of the message to mark as read.
-  * 
-  * Required
-  */
-  MessageId: string;
-
-
-
-
-
-  /**
-  * Authentication parameters
-  */
-  Auth: ReadMessageForwardFederationRequestAuthParams;
-
-
-  /**
-  * Request body
-  */
-  Body: ReadMessageForwardFederationRequestBody;
-
-}
-
-
-
-export type ReadMessageForwardFederationRequestBody = {
-  
-  /**
-  * User ID of the user who read the message. This should be in the format localpart@domain and must belong to the requesting server.
-  * Required
-  *  Must be non-empty
-  */
-  ReaderUserId: string;
-
-}
-
-
-
-
-export type ReadMessageForwardFederationRequestAuthParams = {
-  
-  
-  /**
-  * Required Authentication Method
-  * Source: header "Authorization"
-  *  Description: Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint. 
-  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
-  */
-  Authorization?: string;
-  
-  
-
-  
-};
-
-
-
-export function ValidateReadMessageForwardFederationRequest(req: ReadMessageForwardFederationRequest) : IIMPError | null {
-  if (!req) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
-  }
-
-  
-  // Validate request body
-  const bodyValidationError = ValidateReadMessageForwardFederationRequestBody(req.Body);
-  if (bodyValidationError) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Invalid request body: " + bodyValidationError.message, bodyValidationError);
-  }
-  
-
-  
-  
-  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
-  }
-  
-  
-
-  
-
-  return null;
-}
-
-
-function ValidateReadMessageForwardFederationRequestBody(o: ReadMessageForwardFederationRequestBody) : IIMPError | null {
-  
-  
-  
-  if (o.ReaderUserId.trim() === "") {
-    throw new Error("Field 'ReaderUserId' must be non-empty");
-  }
-  
-  
-  
-  
-  return null;
-}
-
-
-
-
-
-
-export type ReadMessageForwardFederation200Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewReadMessageForwardFederation200Response(resp: Response): Promise<ReadMessageForwardFederation200Response> {
-  var result = {} as ReadMessageForwardFederation200Response;
-
-  
-
-  
-  return result
-}
-
-
-export type ReadMessageForwardFederation400Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewReadMessageForwardFederation400Response(resp: Response): Promise<ReadMessageForwardFederation400Response> {
-  var result = {} as ReadMessageForwardFederation400Response;
-
-  
-
-  
-  return result
-}
-
-
-export type ReadMessageForwardFederation401Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewReadMessageForwardFederation401Response(resp: Response): Promise<ReadMessageForwardFederation401Response> {
-  var result = {} as ReadMessageForwardFederation401Response;
-
-  
-
-  
-  return result
-}
-
-
-export type ReadMessageForwardFederation403Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewReadMessageForwardFederation403Response(resp: Response): Promise<ReadMessageForwardFederation403Response> {
-  var result = {} as ReadMessageForwardFederation403Response;
-
-  
-
-  
-  return result
-}
-
-
-export type ReadMessageForwardFederation404Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewReadMessageForwardFederation404Response(resp: Response): Promise<ReadMessageForwardFederation404Response> {
-  var result = {} as ReadMessageForwardFederation404Response;
-
-  
-
-  
-  return result
-}
-
-
-export type ReadMessageForwardFederation500Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewReadMessageForwardFederation500Response(resp: Response): Promise<ReadMessageForwardFederation500Response> {
-  var result = {} as ReadMessageForwardFederation500Response;
-
-  
-
-  
-  return result
-}
-
-
-
-
 const RedactMessageRequestHTTPMethod = "POST";
-const RedactMessageRequestRoutePath   = "/api/client/conversations/{conversationId}/messages/{messageId}/redact";
+const RedactMessageRequestRoutePath   = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/redact";
 
 /**
  * Redact a message in a conversation. If this conversation is a Direct Conversation, only the sender of the message can redact it. If this conversation is a Group Conversation, only the sender of the message or the owner of the conversation can redact it.
@@ -6151,7 +4933,7 @@ export type RedactMessageRequest = {
   /**
   * Source: path parameter "{conversationId}"
   
-  * The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+  * The unique identifier of the conversation that the message belongs to.
   * 
   * Required
   */
@@ -6161,7 +4943,7 @@ export type RedactMessageRequest = {
   /**
   * Source: path parameter "{messageId}"
   
-  * The unique identifier of the message to redact. This is typically a UUIDv7.
+  * The unique identifier of the message to redact.
   * 
   * Required
   */
@@ -6342,248 +5124,8 @@ export async function NewRedactMessage500Response(resp: Response): Promise<Redac
 
 
 
-const RedactMessageForwardFederationRequestHTTPMethod = "POST";
-const RedactMessageForwardFederationRequestRoutePath   = "/api/federation/conversations/{conversationId}/messages/{messageId}/redact/forward";
-
-/**
- * \"FEDERATION\" Redact a message in a conversation on another server.
- */
-export type RedactMessageForwardFederationRequest = {
-
-  /**
-  * Source: path parameter "{conversationId}"
-  
-  * Unique identifier of the conversation to redact the message in.
-  * 
-  * Required
-  */
-  ConversationId: string;
-
-
-  /**
-  * Source: path parameter "{messageId}"
-  
-  * Unique identifier of the message to redact.
-  * 
-  * Required
-  */
-  MessageId: string;
-
-
-
-
-
-  /**
-  * Authentication parameters
-  */
-  Auth: RedactMessageForwardFederationRequestAuthParams;
-
-
-  /**
-  * Request body
-  */
-  Body: RedactMessageForwardFederationRequestBody;
-
-}
-
-
-
-export type RedactMessageForwardFederationRequestBody = {
-  
-  /**
-  * User ID of the sender of the message to redact. This should be in the format localpart@domain and must belong to the requesting server and should be equal to the sender's id on the receiving server's message.
-  * Required
-  *  Must be non-empty
-  */
-  SenderUserId: string;
-
-}
-
-
-
-
-export type RedactMessageForwardFederationRequestAuthParams = {
-  
-  
-  /**
-  * Required Authentication Method
-  * Source: header "Authorization"
-  *  Description: Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint. 
-  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
-  */
-  Authorization?: string;
-  
-  
-
-  
-};
-
-
-
-export function ValidateRedactMessageForwardFederationRequest(req: RedactMessageForwardFederationRequest) : IIMPError | null {
-  if (!req) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
-  }
-
-  
-  // Validate request body
-  const bodyValidationError = ValidateRedactMessageForwardFederationRequestBody(req.Body);
-  if (bodyValidationError) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Invalid request body: " + bodyValidationError.message, bodyValidationError);
-  }
-  
-
-  
-  
-  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
-  }
-  
-  
-
-  
-
-  return null;
-}
-
-
-function ValidateRedactMessageForwardFederationRequestBody(o: RedactMessageForwardFederationRequestBody) : IIMPError | null {
-  
-  
-  
-  if (o.SenderUserId.trim() === "") {
-    throw new Error("Field 'SenderUserId' must be non-empty");
-  }
-  
-  
-  
-  
-  return null;
-}
-
-
-
-
-
-
-export type RedactMessageForwardFederation200Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewRedactMessageForwardFederation200Response(resp: Response): Promise<RedactMessageForwardFederation200Response> {
-  var result = {} as RedactMessageForwardFederation200Response;
-
-  
-
-  
-  return result
-}
-
-
-export type RedactMessageForwardFederation400Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewRedactMessageForwardFederation400Response(resp: Response): Promise<RedactMessageForwardFederation400Response> {
-  var result = {} as RedactMessageForwardFederation400Response;
-
-  
-
-  
-  return result
-}
-
-
-export type RedactMessageForwardFederation401Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewRedactMessageForwardFederation401Response(resp: Response): Promise<RedactMessageForwardFederation401Response> {
-  var result = {} as RedactMessageForwardFederation401Response;
-
-  
-
-  
-  return result
-}
-
-
-export type RedactMessageForwardFederation403Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewRedactMessageForwardFederation403Response(resp: Response): Promise<RedactMessageForwardFederation403Response> {
-  var result = {} as RedactMessageForwardFederation403Response;
-
-  
-
-  
-  return result
-}
-
-
-export type RedactMessageForwardFederation404Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewRedactMessageForwardFederation404Response(resp: Response): Promise<RedactMessageForwardFederation404Response> {
-  var result = {} as RedactMessageForwardFederation404Response;
-
-  
-
-  
-  return result
-}
-
-
-export type RedactMessageForwardFederation500Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewRedactMessageForwardFederation500Response(resp: Response): Promise<RedactMessageForwardFederation500Response> {
-  var result = {} as RedactMessageForwardFederation500Response;
-
-  
-
-  
-  return result
-}
-
-
-
-
 const RefreshSessionRequestHTTPMethod = "POST";
-const RefreshSessionRequestRoutePath   = "/api/client/refresh-session";
+const RefreshSessionRequestRoutePath   = "/iimp/api/client/refresh-session";
 
 /**
  * Refresh the session token.
@@ -6663,6 +5205,45 @@ export type RefreshSession200Response = {
   
 
   
+  /**
+   * Response body
+   */
+  Body: RefreshSession200ResponseBody;
+  
+}
+
+
+
+export type RefreshSession200ResponseBody = {
+  
+  /**
+  * A new token used to refresh the session token when it expires. Previous refresh tokens are invalidated when a new refresh token is issued.
+  * Required
+  *  Must be non-empty
+  */
+  RefreshToken: string;
+
+  /**
+  * The timestamp of when the refresh token expires. Format => RFC3339
+  * Required
+  * 
+  */
+  RefreshTokenExpiry: string;
+
+  /**
+  * A new token used to authenticate the client session. This token must be included in the header of subsequent requests to access protected resources.
+  * Required
+  *  Must be non-empty
+  */
+  SessionToken: string;
+
+  /**
+  * The timestamp of when the session token expires. Format => RFC3339
+  * Required
+  * 
+  */
+  SessionTokenExpiry: string;
+
 }
 
 
@@ -6670,6 +5251,32 @@ export type RefreshSession200Response = {
 
 export async function NewRefreshSession200Response(resp: Response): Promise<RefreshSession200Response> {
   var result = {} as RefreshSession200Response;
+
+  
+
+  
+  try {
+    const body = await resp.json();
+    result.Body = body;
+  } catch (err) {
+    throw new IIMPError(IIMPErrorReasonDecodeError, "Failed to decode response body", err instanceof Error ? err : new Error(String(err)));
+  }
+  
+  return result
+}
+
+
+export type RefreshSession400Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewRefreshSession400Response(resp: Response): Promise<RefreshSession400Response> {
+  var result = {} as RefreshSession400Response;
 
   
 
@@ -6719,7 +5326,7 @@ export async function NewRefreshSession500Response(resp: Response): Promise<Refr
 
 
 const RequestResetPasswordRequestHTTPMethod = "POST";
-const RequestResetPasswordRequestRoutePath   = "/api/client/request-reset-password";
+const RequestResetPasswordRequestRoutePath   = "/iimp/api/client/request-reset-password";
 
 /**
  * Request a password reset for the user account.
@@ -6855,7 +5462,7 @@ export async function NewRequestResetPassword500Response(resp: Response): Promis
 
 
 const ResetPasswordRequestHTTPMethod = "POST";
-const ResetPasswordRequestRoutePath   = "/api/client/reset-password";
+const ResetPasswordRequestRoutePath   = "/iimp/api/client/reset-password";
 
 /**
  * Reset the password for the user account.
@@ -7023,7 +5630,7 @@ export async function NewResetPassword500Response(resp: Response): Promise<Reset
 
 
 const SignUpRequestHTTPMethod = "POST";
-const SignUpRequestRoutePath   = "/api/client/signup";
+const SignUpRequestRoutePath   = "/iimp/api/client/signup";
 
 /**
  * Register a new user account with the IIMP service.
@@ -7046,11 +5653,11 @@ export type SignUpRequest = {
 export type SignUpRequestBody = {
   
   /**
-  * Optional display name for the user.
-  * Optional
-  * 
+  * Display name for the user.
+  * Required
+  *  Must be non-empty
   */
-  DisplayName: string | null;
+  DisplayName: string;
 
   /**
   * Email address for the new account. This can be same as the user ID or a different email address. The email address will be used for account recovery.
@@ -7102,6 +5709,12 @@ export function ValidateSignUpRequest(req: SignUpRequest) : IIMPError | null {
 
 
 function ValidateSignUpRequestBody(o: SignUpRequestBody) : IIMPError | null {
+  
+  
+  
+  if (o.DisplayName.trim() === "") {
+    throw new Error("Field 'DisplayName' must be non-empty");
+  }
   
   
   
@@ -7179,6 +5792,25 @@ export async function NewSignUp400Response(resp: Response): Promise<SignUp400Res
 }
 
 
+export type SignUp403Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewSignUp403Response(resp: Response): Promise<SignUp403Response> {
+  var result = {} as SignUp403Response;
+
+  
+
+  
+  return result
+}
+
+
 export type SignUp409Response = {
   
 
@@ -7219,219 +5851,8 @@ export async function NewSignUp500Response(resp: Response): Promise<SignUp500Res
 
 
 
-const SyncUserEventsRequestHTTPMethod = "GET";
-const SyncUserEventsRequestRoutePath   = "/api/client/events/sync";
-
-/**
- * Fetch a list of events for the authenticated user.
- */
-export type SyncUserEventsRequest = {
-
-
-  /**
-  * Source: query parameter "cursor"
-  
-  * A cursor (Monotonically increasing per-user sequence number) for pagination. The server will return events starting from this cursor. If not provided, the server will return all available events starting from the oldest event in the system. The response will include a next_cursor field that can be used to fetch the next page of results.
-  * 
-  * Optional
-  */
-  Cursor?: number | undefined;
-
-
-  /**
-  * Source: query parameter "limit"
-  
-  * The maximum number of events to return in the response. If not provided, the server will use a default limit (e.g., 50). The server may enforce a maximum limit (100) to prevent excessively large responses.
-  * 
-  * Optional
-  */
-  Limit?: number | undefined;
-
-
-
-
-  /**
-  * Authentication parameters
-  */
-  Auth: SyncUserEventsRequestAuthParams;
-
-
-}
-
-
-
-
-export type SyncUserEventsRequestAuthParams = {
-  
-  
-  /**
-  * Required Authentication Method
-  * Source: header "Authorization"
-  *  Description: A token used to authenticate the client session. This token is obtained after a successful login and must be included in the header of subsequent requests to access protected resources. 
-  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
-  */
-  Authorization?: string;
-  
-  
-
-  
-};
-
-
-
-export function ValidateSyncUserEventsRequest(req: SyncUserEventsRequest) : IIMPError | null {
-  if (!req) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
-  }
-
-  
-
-  
-  
-  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
-  }
-  
-  
-
-  
-
-  return null;
-}
-
-
-
-
-
-
-
-export type SyncUserEvents200Response = {
-  
-
-  
-  /**
-   * Response body
-   */
-  Body: SyncUserEvents200ResponseBody;
-  
-}
-
-
-
-export type SyncUserEvents200ResponseBodyEventsItem = {
-  
-  /**
-  * The timestamp when the event was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
-  * Required
-  *  Must be non-empty
-  */
-  CreatedAt: string;
-
-  /**
-  * A unique identifier for the event (Monotonically increasing per-user sequence number).
-  * Required
-  * 
-  */
-  EventId: number;
-
-  /**
-  * The type of the event (e.g., "message_received", "conversation_created", etc.). This field can be used by the client to determine how to process the event. For a full list of event types and their corresponding payload structures, refer to the IIMP Client Events documentation [here](https://github.com/iim-protocol/iimp/tree/main/Events.md).
-  * Required
-  *  Must be non-empty
-  */
-  EventType: string;
-
-  /**
-  * An optional field containing additional data related to the event. The structure of this object can vary depending on the event type and must conform to the IIMP Client Events documentation. Clients should be designed to handle different payload structures based on the event type.
-  * Optional
-  * 
-  */
-  Payload: Record<string, any> | null;
-
-}
-
-
-
-export type SyncUserEvents200ResponseBody = {
-  
-  /**
-  * A list of events for the authenticated user, if any available. The events are ordered by their EventId in Ascending Order. The server may return up to 'limit' events in the response. If there are more events available beyond the returned list, a 'next_cursor' field will be included in the response, which can be used to fetch the next page of results.
-  * Required
-  * 
-  */
-  Events: Array<SyncUserEvents200ResponseBodyEventsItem>;
-
-  /**
-  * A cursor for the next page of results, if available. This field will be included in the response if there are more events available beyond the returned list.
-  * Optional
-  * 
-  */
-  NextCursor: number | null;
-
-}
-
-
-
-
-export async function NewSyncUserEvents200Response(resp: Response): Promise<SyncUserEvents200Response> {
-  var result = {} as SyncUserEvents200Response;
-
-  
-
-  
-  try {
-    const body = await resp.json();
-    result.Body = body;
-  } catch (err) {
-    throw new IIMPError(IIMPErrorReasonDecodeError, "Failed to decode response body", err instanceof Error ? err : new Error(String(err)));
-  }
-  
-  return result
-}
-
-
-export type SyncUserEvents401Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewSyncUserEvents401Response(resp: Response): Promise<SyncUserEvents401Response> {
-  var result = {} as SyncUserEvents401Response;
-
-  
-
-  
-  return result
-}
-
-
-export type SyncUserEvents500Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewSyncUserEvents500Response(resp: Response): Promise<SyncUserEvents500Response> {
-  var result = {} as SyncUserEvents500Response;
-
-  
-
-  
-  return result
-}
-
-
-
-
 const UpdateConversationRequestHTTPMethod = "PUT";
-const UpdateConversationRequestRoutePath   = "/api/client/conversations/{conversationId}";
+const UpdateConversationRequestRoutePath   = "/iimp/api/client/conversations/{conversationId}";
 
 /**
  * Update an existing conversation. Only for Group Conversations, Direct Conversations cannot be updated.
@@ -7441,7 +5862,7 @@ export type UpdateConversationRequest = {
   /**
   * Source: path parameter "{conversationId}"
   
-  * The unique identifier of the conversation to update. This is typically a UUIDv7.
+  * The unique identifier of the conversation to update.
   * 
   * Required
   */
@@ -7574,21 +5995,14 @@ export type UpdateConversation200Response = {
 export type UpdateConversation200ResponseBodyConversationParticipantsItem = {
   
   /**
-  * The unique identifier of the conversation that the participant is part of. This is typically a UUIDv7.
-  * Required
-  *  Must be non-empty
-  */
-  ConversationId: string;
-
-  /**
-  * The timestamp when the participant joined the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+  * The timestamp when the participant joined the conversation. Format => RFC3339.
   * Required
   *  Must be non-empty
   */
   JoinedAt: string;
 
   /**
-  * The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
+  * The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => RFC3339. A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
   * Optional
   * 
   */
@@ -7615,7 +6029,7 @@ export type UpdateConversation200ResponseBodyConversationParticipantsItem = {
 export type UpdateConversation200ResponseBodyConversation = {
   
   /**
-  * A unique identifier for the conversation, typically a UUIDv7.
+  * A unique identifier for the conversation.
   * Required
   *  Must be non-empty
   */
@@ -7636,11 +6050,18 @@ export type UpdateConversation200ResponseBodyConversation = {
   ConversationOwnerId: string;
 
   /**
-  * The timestamp when the conversation was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+  * The timestamp when the conversation was created. Format => RFC3339.
   * Required
   *  Must be non-empty
   */
   CreatedAt: string;
+
+  /**
+  * A flag indicating whether the conversation is a Direct Message (DM) or a Group Conversation. A Direct Message conversation has exactly 2 participants (including the owner), while a Group Conversation has more than 2 participants.
+  * Required
+  * 
+  */
+  IsDM: boolean;
 
   /**
   * A list of participants in the conversation. The owner of the conversation is also included in this list. Participants can be added or removed by the owner user. Contains at least 2 participants (including the owner) for a Direct Conversation and >2 participants for a Group Conversation.
@@ -7657,10 +6078,10 @@ export type UpdateConversation200ResponseBody = {
   
   /**
   * Details of the updated conversation.
-  * Optional
+  * Required
   * 
   */
-  Conversation: UpdateConversation200ResponseBodyConversation | null;
+  Conversation: UpdateConversation200ResponseBodyConversation;
 
 }
 
@@ -7781,24 +6202,24 @@ export async function NewUpdateConversation500Response(resp: Response): Promise<
 
 
 
-const UploadAttachmentRequestHTTPMethod = "PUT";
-const UploadAttachmentRequestRoutePath   = "/api/client/attachments/{attachmentId}/bytes";
+const UploadAttachmentRequestHTTPMethod = "POST";
+const UploadAttachmentRequestRoutePath   = "/iimp/api/client/attachments";
 
 /**
  * Upload the bytes of an attachment. The bytes go in the request body.
  */
 export type UploadAttachmentRequest = {
 
+
+
   /**
-  * Source: path parameter "{attachmentId}"
+  * Source: header parameter "X-IIMP-Attachment-Filename"
   
-  * No description provided.
+  * The original filename of the attachment.
   * 
   * Required
   */
-  AttachmentId: string;
-
-
+  Filename: string;
 
 
 
@@ -7857,20 +6278,45 @@ export function ValidateUploadAttachmentRequest(req: UploadAttachmentRequest) : 
 
 
 
-export type UploadAttachment204Response = {
+export type UploadAttachment201Response = {
   
 
+  
+  /**
+   * Response body
+   */
+  Body: UploadAttachment201ResponseBody;
   
 }
 
 
 
+export type UploadAttachment201ResponseBody = {
+  
+  /**
+  * A unique identifier for the file, which should be added to the new message payload to reference the file in messages.
+  * Required
+  *  Must be non-empty
+  */
+  FileId: string;
 
-export async function NewUploadAttachment204Response(resp: Response): Promise<UploadAttachment204Response> {
-  var result = {} as UploadAttachment204Response;
+}
+
+
+
+
+export async function NewUploadAttachment201Response(resp: Response): Promise<UploadAttachment201Response> {
+  var result = {} as UploadAttachment201Response;
 
   
 
+  
+  try {
+    const body = await resp.json();
+    result.Body = body;
+  } catch (err) {
+    throw new IIMPError(IIMPErrorReasonDecodeError, "Failed to decode response body", err instanceof Error ? err : new Error(String(err)));
+  }
   
   return result
 }
@@ -7952,47 +6398,10 @@ export async function NewUploadAttachment404Response(resp: Response): Promise<Up
 }
 
 
-export type UploadAttachment409Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewUploadAttachment409Response(resp: Response): Promise<UploadAttachment409Response> {
-  var result = {} as UploadAttachment409Response;
-
-  
-
-  
-  return result
-}
-
-
 export type UploadAttachment413Response = {
   
 
   
-  /**
-   * Response body
-   */
-  Body: UploadAttachment413ResponseBody;
-  
-}
-
-
-
-export type UploadAttachment413ResponseBody = {
-  
-  /**
-  * The total size of the attachment specified during creation in bytes.
-  * Required
-  * 
-  */
-  AttachmentSize: number;
-
 }
 
 
@@ -8003,13 +6412,6 @@ export async function NewUploadAttachment413Response(resp: Response): Promise<Up
 
   
 
-  
-  try {
-    const body = await resp.json();
-    result.Body = body;
-  } catch (err) {
-    throw new IIMPError(IIMPErrorReasonDecodeError, "Failed to decode response body", err instanceof Error ? err : new Error(String(err)));
-  }
   
   return result
 }

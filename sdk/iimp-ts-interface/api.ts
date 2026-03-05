@@ -3,6 +3,8 @@
 import { IIMPError } from "./models";
 import * as Models from "./models";
 
+export const IIMPVersion = "0.0.1";
+
 export class IIMP {
   private baseURL: string;
   private headers: Record<string, string>;
@@ -11,7 +13,7 @@ export class IIMP {
     this.baseURL = baseURL;
     this.headers = {
       'Accept': 'application/json',
-      'User-Agent': 'IIMP-TypeScriptSDK/1.0.0'
+      'User-Agent': 'IIMP-TypeScriptSDK/0.0.1'
     };
   }
 
@@ -27,7 +29,7 @@ export class IIMP {
     var result = {} as AddPublicKeyResult;
     Models.ValidateAddPublicKeyRequest(params);
 
-    var path = "/api/client/keys";
+    var path = "/iimp/api/client/keys";
     
     const url = new URL(this.baseURL + path);
     
@@ -76,7 +78,7 @@ export class IIMP {
     var result = {} as ConversationFederationResult;
     Models.ValidateConversationFederationRequest(params);
 
-    var path = "/api/federation/conversations";
+    var path = "/iimp/api/federation/conversations";
     
     const url = new URL(this.baseURL + path);
     
@@ -152,8 +154,138 @@ export class IIMP {
         result.Response200 = await Models.NewDiscoverServer200Response(response);
         break;
     
+      case 404:
+        result.Response404 = await Models.NewDiscoverServer404Response(response);
+        break;
+    
       case 500:
         result.Response500 = await Models.NewDiscoverServer500Response(response);
+        break;
+    
+      default:
+        result.UnknownResponse = {
+          StatusCode: response.status,
+          Resp: response,
+        };
+    }
+    return result;
+  }
+  
+  
+  // Throws IIMPError, or a network error
+  async DownloadAttachment(params: Models.DownloadAttachmentRequest): Promise<DownloadAttachmentResult> {
+    var result = {} as DownloadAttachmentResult;
+    Models.ValidateDownloadAttachmentRequest(params);
+
+    var path = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes";
+    
+    var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
+    path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
+    
+    var pathParamMessageId = paramToString(params.MessageId, "path parameter: MessageId", "string", true);
+    path = path.replace("{messageId}", encodeURIComponent(pathParamMessageId));
+    
+    var pathParamFileId = paramToString(params.FileId, "path parameter: FileId", "string", true);
+    path = path.replace("{fileId}", encodeURIComponent(pathParamFileId));
+    
+    const url = new URL(this.baseURL + path);
+    
+
+    var requestInit: RequestInit = {
+      method: "GET",
+    }
+    
+    
+    const request = new Request(url, this.addHeaders(requestInit));
+    const response = await fetch(request);
+    result.StatusCode = response.status;
+    switch (response.status) {
+    
+      case 200:
+        result.Response200 = await Models.NewDownloadAttachment200Response(response);
+        break;
+    
+      case 400:
+        result.Response400 = await Models.NewDownloadAttachment400Response(response);
+        break;
+    
+      case 401:
+        result.Response401 = await Models.NewDownloadAttachment401Response(response);
+        break;
+    
+      case 403:
+        result.Response403 = await Models.NewDownloadAttachment403Response(response);
+        break;
+    
+      case 404:
+        result.Response404 = await Models.NewDownloadAttachment404Response(response);
+        break;
+    
+      case 500:
+        result.Response500 = await Models.NewDownloadAttachment500Response(response);
+        break;
+    
+      default:
+        result.UnknownResponse = {
+          StatusCode: response.status,
+          Resp: response,
+        };
+    }
+    return result;
+  }
+  
+  
+  // Throws IIMPError, or a network error
+  async DownloadAttachmentBytesFederation(params: Models.DownloadAttachmentBytesFederationRequest): Promise<DownloadAttachmentBytesFederationResult> {
+    var result = {} as DownloadAttachmentBytesFederationResult;
+    Models.ValidateDownloadAttachmentBytesFederationRequest(params);
+
+    var path = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes";
+    
+    var pathParamFileId = paramToString(params.FileId, "path parameter: FileId", "string", true);
+    path = path.replace("{fileId}", encodeURIComponent(pathParamFileId));
+    
+    var pathParamMessageId = paramToString(params.MessageId, "path parameter: MessageId", "string", true);
+    path = path.replace("{messageId}", encodeURIComponent(pathParamMessageId));
+    
+    var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
+    path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
+    
+    const url = new URL(this.baseURL + path);
+    
+
+    var requestInit: RequestInit = {
+      method: "GET",
+    }
+    
+    
+    const request = new Request(url, this.addHeaders(requestInit));
+    const response = await fetch(request);
+    result.StatusCode = response.status;
+    switch (response.status) {
+    
+      case 200:
+        result.Response200 = await Models.NewDownloadAttachmentBytesFederation200Response(response);
+        break;
+    
+      case 400:
+        result.Response400 = await Models.NewDownloadAttachmentBytesFederation400Response(response);
+        break;
+    
+      case 401:
+        result.Response401 = await Models.NewDownloadAttachmentBytesFederation401Response(response);
+        break;
+    
+      case 403:
+        result.Response403 = await Models.NewDownloadAttachmentBytesFederation403Response(response);
+        break;
+    
+      case 404:
+        result.Response404 = await Models.NewDownloadAttachmentBytesFederation404Response(response);
+        break;
+    
+      case 500:
+        result.Response500 = await Models.NewDownloadAttachmentBytesFederation500Response(response);
         break;
     
       default:
@@ -171,7 +303,7 @@ export class IIMP {
     var result = {} as EditMessageResult;
     Models.ValidateEditMessageRequest(params);
 
-    var path = "/api/client/conversations/{conversationId}/messages/{messageId}";
+    var path = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}";
     
     var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
     path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
@@ -230,195 +362,6 @@ export class IIMP {
   
   
   // Throws IIMPError, or a network error
-  async EditMessageForwardFederation(params: Models.EditMessageForwardFederationRequest): Promise<EditMessageForwardFederationResult> {
-    var result = {} as EditMessageForwardFederationResult;
-    Models.ValidateEditMessageForwardFederationRequest(params);
-
-    var path = "/api/federation/conversations/{conversationId}/messages/{messageId}/edit/forward";
-    
-    var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
-    path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
-    
-    var pathParamMessageId = paramToString(params.MessageId, "path parameter: MessageId", "string", true);
-    path = path.replace("{messageId}", encodeURIComponent(pathParamMessageId));
-    
-    const url = new URL(this.baseURL + path);
-    
-
-    var requestInit: RequestInit = {
-      method: "PUT",
-    }
-    
-    
-    requestInit.body = JSON.stringify(params.Body);
-    requestInit.headers = { ...requestInit.headers, 'Content-Type': 'application/json' };
-    
-    const request = new Request(url, this.addHeaders(requestInit));
-    const response = await fetch(request);
-    result.StatusCode = response.status;
-    switch (response.status) {
-    
-      case 200:
-        result.Response200 = await Models.NewEditMessageForwardFederation200Response(response);
-        break;
-    
-      case 400:
-        result.Response400 = await Models.NewEditMessageForwardFederation400Response(response);
-        break;
-    
-      case 401:
-        result.Response401 = await Models.NewEditMessageForwardFederation401Response(response);
-        break;
-    
-      case 403:
-        result.Response403 = await Models.NewEditMessageForwardFederation403Response(response);
-        break;
-    
-      case 404:
-        result.Response404 = await Models.NewEditMessageForwardFederation404Response(response);
-        break;
-    
-      case 500:
-        result.Response500 = await Models.NewEditMessageForwardFederation500Response(response);
-        break;
-    
-      default:
-        result.UnknownResponse = {
-          StatusCode: response.status,
-          Resp: response,
-        };
-    }
-    return result;
-  }
-  
-  
-  // Throws IIMPError, or a network error
-  async FetchAttachmentBytes(params: Models.FetchAttachmentBytesRequest): Promise<FetchAttachmentBytesResult> {
-    var result = {} as FetchAttachmentBytesResult;
-    Models.ValidateFetchAttachmentBytesRequest(params);
-
-    var path = "/api/client/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes";
-    
-    var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
-    path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
-    
-    var pathParamMessageId = paramToString(params.MessageId, "path parameter: MessageId", "string", true);
-    path = path.replace("{messageId}", encodeURIComponent(pathParamMessageId));
-    
-    var pathParamAttachmentId = paramToString(params.AttachmentId, "path parameter: AttachmentId", "string", true);
-    path = path.replace("{attachmentId}", encodeURIComponent(pathParamAttachmentId));
-    
-    const url = new URL(this.baseURL + path);
-    
-
-    var requestInit: RequestInit = {
-      method: "GET",
-    }
-    
-    
-    const request = new Request(url, this.addHeaders(requestInit));
-    const response = await fetch(request);
-    result.StatusCode = response.status;
-    switch (response.status) {
-    
-      case 200:
-        result.Response200 = await Models.NewFetchAttachmentBytes200Response(response);
-        break;
-    
-      case 400:
-        result.Response400 = await Models.NewFetchAttachmentBytes400Response(response);
-        break;
-    
-      case 401:
-        result.Response401 = await Models.NewFetchAttachmentBytes401Response(response);
-        break;
-    
-      case 403:
-        result.Response403 = await Models.NewFetchAttachmentBytes403Response(response);
-        break;
-    
-      case 404:
-        result.Response404 = await Models.NewFetchAttachmentBytes404Response(response);
-        break;
-    
-      case 500:
-        result.Response500 = await Models.NewFetchAttachmentBytes500Response(response);
-        break;
-    
-      default:
-        result.UnknownResponse = {
-          StatusCode: response.status,
-          Resp: response,
-        };
-    }
-    return result;
-  }
-  
-  
-  // Throws IIMPError, or a network error
-  async FetchAttachmentBytesFederation(params: Models.FetchAttachmentBytesFederationRequest): Promise<FetchAttachmentBytesFederationResult> {
-    var result = {} as FetchAttachmentBytesFederationResult;
-    Models.ValidateFetchAttachmentBytesFederationRequest(params);
-
-    var path = "/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes";
-    
-    var pathParamAttachmentId = paramToString(params.AttachmentId, "path parameter: AttachmentId", "string", true);
-    path = path.replace("{attachmentId}", encodeURIComponent(pathParamAttachmentId));
-    
-    var pathParamMessageId = paramToString(params.MessageId, "path parameter: MessageId", "string", true);
-    path = path.replace("{messageId}", encodeURIComponent(pathParamMessageId));
-    
-    var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
-    path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
-    
-    const url = new URL(this.baseURL + path);
-    
-
-    var requestInit: RequestInit = {
-      method: "GET",
-    }
-    
-    
-    const request = new Request(url, this.addHeaders(requestInit));
-    const response = await fetch(request);
-    result.StatusCode = response.status;
-    switch (response.status) {
-    
-      case 200:
-        result.Response200 = await Models.NewFetchAttachmentBytesFederation200Response(response);
-        break;
-    
-      case 400:
-        result.Response400 = await Models.NewFetchAttachmentBytesFederation400Response(response);
-        break;
-    
-      case 401:
-        result.Response401 = await Models.NewFetchAttachmentBytesFederation401Response(response);
-        break;
-    
-      case 403:
-        result.Response403 = await Models.NewFetchAttachmentBytesFederation403Response(response);
-        break;
-    
-      case 404:
-        result.Response404 = await Models.NewFetchAttachmentBytesFederation404Response(response);
-        break;
-    
-      case 500:
-        result.Response500 = await Models.NewFetchAttachmentBytesFederation500Response(response);
-        break;
-    
-      default:
-        result.UnknownResponse = {
-          StatusCode: response.status,
-          Resp: response,
-        };
-    }
-    return result;
-  }
-  
-  
-  // Throws IIMPError, or a network error
   async GetJWKSStore(params: Models.GetJWKSStoreRequest): Promise<GetJWKSStoreResult> {
     var result = {} as GetJWKSStoreResult;
     Models.ValidateGetJWKSStoreRequest(params);
@@ -461,7 +404,7 @@ export class IIMP {
     var result = {} as GetUserInfoFederationResult;
     Models.ValidateGetUserInfoFederationRequest(params);
 
-    var path = "/api/federation/users/{userId}";
+    var path = "/iimp/api/federation/users/{userId}";
     
     var pathParamUserId = paramToString(params.UserId, "path parameter: UserId", "string", true);
     path = path.replace("{userId}", encodeURIComponent(pathParamUserId));
@@ -532,6 +475,10 @@ export class IIMP {
         result.Response200 = await Models.NewGetUserPublicKey200Response(response);
         break;
     
+      case 400:
+        result.Response400 = await Models.NewGetUserPublicKey400Response(response);
+        break;
+    
       case 404:
         result.Response404 = await Models.NewGetUserPublicKey404Response(response);
         break;
@@ -580,6 +527,10 @@ export class IIMP {
         result.Response200 = await Models.NewGetUserPublicKeyById200Response(response);
         break;
     
+      case 400:
+        result.Response400 = await Models.NewGetUserPublicKeyById400Response(response);
+        break;
+    
       case 404:
         result.Response404 = await Models.NewGetUserPublicKeyById404Response(response);
         break;
@@ -603,7 +554,7 @@ export class IIMP {
     var result = {} as LoginResult;
     Models.ValidateLoginRequest(params);
 
-    var path = "/api/client/login";
+    var path = "/iimp/api/client/login";
     
     const url = new URL(this.baseURL + path);
     
@@ -652,7 +603,7 @@ export class IIMP {
     var result = {} as LogoutResult;
     Models.ValidateLogoutRequest(params);
 
-    var path = "/api/client/logout";
+    var path = "/iimp/api/client/logout";
     
     const url = new URL(this.baseURL + path);
     
@@ -669,6 +620,10 @@ export class IIMP {
     
       case 204:
         result.Response204 = await Models.NewLogout204Response(response);
+        break;
+    
+      case 400:
+        result.Response400 = await Models.NewLogout400Response(response);
         break;
     
       case 401:
@@ -694,7 +649,7 @@ export class IIMP {
     var result = {} as MessageFederationResult;
     Models.ValidateMessageFederationRequest(params);
 
-    var path = "/api/federation/conversations/{conversationId}/messages";
+    var path = "/iimp/api/federation/conversations/{conversationId}/messages";
     
     var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
     path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
@@ -750,124 +705,11 @@ export class IIMP {
   
   
   // Throws IIMPError, or a network error
-  async MessageForwardFederation(params: Models.MessageForwardFederationRequest): Promise<MessageForwardFederationResult> {
-    var result = {} as MessageForwardFederationResult;
-    Models.ValidateMessageForwardFederationRequest(params);
-
-    var path = "/api/federation/conversations/{conversationId}/messages/forward";
-    
-    var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
-    path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
-    
-    const url = new URL(this.baseURL + path);
-    
-
-    var requestInit: RequestInit = {
-      method: "POST",
-    }
-    
-    
-    requestInit.body = JSON.stringify(params.Body);
-    requestInit.headers = { ...requestInit.headers, 'Content-Type': 'application/json' };
-    
-    const request = new Request(url, this.addHeaders(requestInit));
-    const response = await fetch(request);
-    result.StatusCode = response.status;
-    switch (response.status) {
-    
-      case 200:
-        result.Response200 = await Models.NewMessageForwardFederation200Response(response);
-        break;
-    
-      case 400:
-        result.Response400 = await Models.NewMessageForwardFederation400Response(response);
-        break;
-    
-      case 401:
-        result.Response401 = await Models.NewMessageForwardFederation401Response(response);
-        break;
-    
-      case 403:
-        result.Response403 = await Models.NewMessageForwardFederation403Response(response);
-        break;
-    
-      case 404:
-        result.Response404 = await Models.NewMessageForwardFederation404Response(response);
-        break;
-    
-      case 500:
-        result.Response500 = await Models.NewMessageForwardFederation500Response(response);
-        break;
-    
-      default:
-        result.UnknownResponse = {
-          StatusCode: response.status,
-          Resp: response,
-        };
-    }
-    return result;
-  }
-  
-  
-  // Throws IIMPError, or a network error
-  async NewAttachment(params: Models.NewAttachmentRequest): Promise<NewAttachmentResult> {
-    var result = {} as NewAttachmentResult;
-    Models.ValidateNewAttachmentRequest(params);
-
-    var path = "/api/client/attachments";
-    
-    const url = new URL(this.baseURL + path);
-    
-
-    var requestInit: RequestInit = {
-      method: "POST",
-    }
-    
-    
-    requestInit.body = JSON.stringify(params.Body);
-    requestInit.headers = { ...requestInit.headers, 'Content-Type': 'application/json' };
-    
-    const request = new Request(url, this.addHeaders(requestInit));
-    const response = await fetch(request);
-    result.StatusCode = response.status;
-    switch (response.status) {
-    
-      case 201:
-        result.Response201 = await Models.NewNewAttachment201Response(response);
-        break;
-    
-      case 400:
-        result.Response400 = await Models.NewNewAttachment400Response(response);
-        break;
-    
-      case 401:
-        result.Response401 = await Models.NewNewAttachment401Response(response);
-        break;
-    
-      case 413:
-        result.Response413 = await Models.NewNewAttachment413Response(response);
-        break;
-    
-      case 500:
-        result.Response500 = await Models.NewNewAttachment500Response(response);
-        break;
-    
-      default:
-        result.UnknownResponse = {
-          StatusCode: response.status,
-          Resp: response,
-        };
-    }
-    return result;
-  }
-  
-  
-  // Throws IIMPError, or a network error
   async NewConversation(params: Models.NewConversationRequest): Promise<NewConversationResult> {
     var result = {} as NewConversationResult;
     Models.ValidateNewConversationRequest(params);
 
-    var path = "/api/client/conversations";
+    var path = "/iimp/api/client/conversations";
     
     const url = new URL(this.baseURL + path);
     
@@ -924,7 +766,7 @@ export class IIMP {
     var result = {} as NewMessageResult;
     Models.ValidateNewMessageRequest(params);
 
-    var path = "/api/client/conversations/{conversationId}/messages";
+    var path = "/iimp/api/client/conversations/{conversationId}/messages";
     
     var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
     path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
@@ -980,11 +822,67 @@ export class IIMP {
   
   
   // Throws IIMPError, or a network error
+  async PullUserEvents(params: Models.PullUserEventsRequest): Promise<PullUserEventsResult> {
+    var result = {} as PullUserEventsResult;
+    Models.ValidatePullUserEventsRequest(params);
+
+    var path = "/iimp/api/client/events";
+    
+    const url = new URL(this.baseURL + path);
+    
+    var queryParamCursor = paramToString(params.Cursor, "query parameter: Cursor", "string", false);
+    if (queryParamCursor !== "") {
+      url.searchParams.append("cursor", queryParamCursor);
+    }
+    
+    var queryParamLimit = paramToString(params.Limit, "query parameter: Limit", "number", false);
+    if (queryParamLimit !== "") {
+      url.searchParams.append("limit", queryParamLimit);
+    }
+    
+
+    var requestInit: RequestInit = {
+      method: "GET",
+    }
+    
+    
+    const request = new Request(url, this.addHeaders(requestInit));
+    const response = await fetch(request);
+    result.StatusCode = response.status;
+    switch (response.status) {
+    
+      case 200:
+        result.Response200 = await Models.NewPullUserEvents200Response(response);
+        break;
+    
+      case 400:
+        result.Response400 = await Models.NewPullUserEvents400Response(response);
+        break;
+    
+      case 401:
+        result.Response401 = await Models.NewPullUserEvents401Response(response);
+        break;
+    
+      case 500:
+        result.Response500 = await Models.NewPullUserEvents500Response(response);
+        break;
+    
+      default:
+        result.UnknownResponse = {
+          StatusCode: response.status,
+          Resp: response,
+        };
+    }
+    return result;
+  }
+  
+  
+  // Throws IIMPError, or a network error
   async ReactToMessage(params: Models.ReactToMessageRequest): Promise<ReactToMessageResult> {
     var result = {} as ReactToMessageResult;
     Models.ValidateReactToMessageRequest(params);
 
-    var path = "/api/client/conversations/{conversationId}/messages/{messageId}/react";
+    var path = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/react";
     
     var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
     path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
@@ -1043,74 +941,11 @@ export class IIMP {
   
   
   // Throws IIMPError, or a network error
-  async ReactToMessageForwardFederation(params: Models.ReactToMessageForwardFederationRequest): Promise<ReactToMessageForwardFederationResult> {
-    var result = {} as ReactToMessageForwardFederationResult;
-    Models.ValidateReactToMessageForwardFederationRequest(params);
-
-    var path = "/api/federation/conversations/{conversationId}/messages/{messageId}/react/forward";
-    
-    var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
-    path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
-    
-    var pathParamMessageId = paramToString(params.MessageId, "path parameter: MessageId", "string", true);
-    path = path.replace("{messageId}", encodeURIComponent(pathParamMessageId));
-    
-    const url = new URL(this.baseURL + path);
-    
-
-    var requestInit: RequestInit = {
-      method: "POST",
-    }
-    
-    
-    requestInit.body = JSON.stringify(params.Body);
-    requestInit.headers = { ...requestInit.headers, 'Content-Type': 'application/json' };
-    
-    const request = new Request(url, this.addHeaders(requestInit));
-    const response = await fetch(request);
-    result.StatusCode = response.status;
-    switch (response.status) {
-    
-      case 200:
-        result.Response200 = await Models.NewReactToMessageForwardFederation200Response(response);
-        break;
-    
-      case 400:
-        result.Response400 = await Models.NewReactToMessageForwardFederation400Response(response);
-        break;
-    
-      case 401:
-        result.Response401 = await Models.NewReactToMessageForwardFederation401Response(response);
-        break;
-    
-      case 403:
-        result.Response403 = await Models.NewReactToMessageForwardFederation403Response(response);
-        break;
-    
-      case 404:
-        result.Response404 = await Models.NewReactToMessageForwardFederation404Response(response);
-        break;
-    
-      case 500:
-        result.Response500 = await Models.NewReactToMessageForwardFederation500Response(response);
-        break;
-    
-      default:
-        result.UnknownResponse = {
-          StatusCode: response.status,
-          Resp: response,
-        };
-    }
-    return result;
-  }
-  
-  
-  // Throws IIMPError, or a network error
   async ReadMessage(params: Models.ReadMessageRequest): Promise<ReadMessageResult> {
     var result = {} as ReadMessageResult;
     Models.ValidateReadMessageRequest(params);
 
-    var path = "/api/client/conversations/{conversationId}/messages/{messageId}/read";
+    var path = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/read";
     
     var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
     path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
@@ -1166,74 +1001,11 @@ export class IIMP {
   
   
   // Throws IIMPError, or a network error
-  async ReadMessageForwardFederation(params: Models.ReadMessageForwardFederationRequest): Promise<ReadMessageForwardFederationResult> {
-    var result = {} as ReadMessageForwardFederationResult;
-    Models.ValidateReadMessageForwardFederationRequest(params);
-
-    var path = "/api/federation/conversations/{conversationId}/messages/{messageId}/read/forward";
-    
-    var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
-    path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
-    
-    var pathParamMessageId = paramToString(params.MessageId, "path parameter: MessageId", "string", true);
-    path = path.replace("{messageId}", encodeURIComponent(pathParamMessageId));
-    
-    const url = new URL(this.baseURL + path);
-    
-
-    var requestInit: RequestInit = {
-      method: "POST",
-    }
-    
-    
-    requestInit.body = JSON.stringify(params.Body);
-    requestInit.headers = { ...requestInit.headers, 'Content-Type': 'application/json' };
-    
-    const request = new Request(url, this.addHeaders(requestInit));
-    const response = await fetch(request);
-    result.StatusCode = response.status;
-    switch (response.status) {
-    
-      case 200:
-        result.Response200 = await Models.NewReadMessageForwardFederation200Response(response);
-        break;
-    
-      case 400:
-        result.Response400 = await Models.NewReadMessageForwardFederation400Response(response);
-        break;
-    
-      case 401:
-        result.Response401 = await Models.NewReadMessageForwardFederation401Response(response);
-        break;
-    
-      case 403:
-        result.Response403 = await Models.NewReadMessageForwardFederation403Response(response);
-        break;
-    
-      case 404:
-        result.Response404 = await Models.NewReadMessageForwardFederation404Response(response);
-        break;
-    
-      case 500:
-        result.Response500 = await Models.NewReadMessageForwardFederation500Response(response);
-        break;
-    
-      default:
-        result.UnknownResponse = {
-          StatusCode: response.status,
-          Resp: response,
-        };
-    }
-    return result;
-  }
-  
-  
-  // Throws IIMPError, or a network error
   async RedactMessage(params: Models.RedactMessageRequest): Promise<RedactMessageResult> {
     var result = {} as RedactMessageResult;
     Models.ValidateRedactMessageRequest(params);
 
-    var path = "/api/client/conversations/{conversationId}/messages/{messageId}/redact";
+    var path = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/redact";
     
     var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
     path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
@@ -1289,74 +1061,11 @@ export class IIMP {
   
   
   // Throws IIMPError, or a network error
-  async RedactMessageForwardFederation(params: Models.RedactMessageForwardFederationRequest): Promise<RedactMessageForwardFederationResult> {
-    var result = {} as RedactMessageForwardFederationResult;
-    Models.ValidateRedactMessageForwardFederationRequest(params);
-
-    var path = "/api/federation/conversations/{conversationId}/messages/{messageId}/redact/forward";
-    
-    var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
-    path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
-    
-    var pathParamMessageId = paramToString(params.MessageId, "path parameter: MessageId", "string", true);
-    path = path.replace("{messageId}", encodeURIComponent(pathParamMessageId));
-    
-    const url = new URL(this.baseURL + path);
-    
-
-    var requestInit: RequestInit = {
-      method: "POST",
-    }
-    
-    
-    requestInit.body = JSON.stringify(params.Body);
-    requestInit.headers = { ...requestInit.headers, 'Content-Type': 'application/json' };
-    
-    const request = new Request(url, this.addHeaders(requestInit));
-    const response = await fetch(request);
-    result.StatusCode = response.status;
-    switch (response.status) {
-    
-      case 200:
-        result.Response200 = await Models.NewRedactMessageForwardFederation200Response(response);
-        break;
-    
-      case 400:
-        result.Response400 = await Models.NewRedactMessageForwardFederation400Response(response);
-        break;
-    
-      case 401:
-        result.Response401 = await Models.NewRedactMessageForwardFederation401Response(response);
-        break;
-    
-      case 403:
-        result.Response403 = await Models.NewRedactMessageForwardFederation403Response(response);
-        break;
-    
-      case 404:
-        result.Response404 = await Models.NewRedactMessageForwardFederation404Response(response);
-        break;
-    
-      case 500:
-        result.Response500 = await Models.NewRedactMessageForwardFederation500Response(response);
-        break;
-    
-      default:
-        result.UnknownResponse = {
-          StatusCode: response.status,
-          Resp: response,
-        };
-    }
-    return result;
-  }
-  
-  
-  // Throws IIMPError, or a network error
   async RefreshSession(params: Models.RefreshSessionRequest): Promise<RefreshSessionResult> {
     var result = {} as RefreshSessionResult;
     Models.ValidateRefreshSessionRequest(params);
 
-    var path = "/api/client/refresh-session";
+    var path = "/iimp/api/client/refresh-session";
     
     const url = new URL(this.baseURL + path);
     
@@ -1376,6 +1085,10 @@ export class IIMP {
     
       case 200:
         result.Response200 = await Models.NewRefreshSession200Response(response);
+        break;
+    
+      case 400:
+        result.Response400 = await Models.NewRefreshSession400Response(response);
         break;
     
       case 401:
@@ -1401,7 +1114,7 @@ export class IIMP {
     var result = {} as RequestResetPasswordResult;
     Models.ValidateRequestResetPasswordRequest(params);
 
-    var path = "/api/client/request-reset-password";
+    var path = "/iimp/api/client/request-reset-password";
     
     const url = new URL(this.baseURL + path);
     
@@ -1446,7 +1159,7 @@ export class IIMP {
     var result = {} as ResetPasswordResult;
     Models.ValidateResetPasswordRequest(params);
 
-    var path = "/api/client/reset-password";
+    var path = "/iimp/api/client/reset-password";
     
     const url = new URL(this.baseURL + path);
     
@@ -1491,7 +1204,7 @@ export class IIMP {
     var result = {} as SignUpResult;
     Models.ValidateSignUpRequest(params);
 
-    var path = "/api/client/signup";
+    var path = "/iimp/api/client/signup";
     
     const url = new URL(this.baseURL + path);
     
@@ -1517,6 +1230,10 @@ export class IIMP {
         result.Response400 = await Models.NewSignUp400Response(response);
         break;
     
+      case 403:
+        result.Response403 = await Models.NewSignUp403Response(response);
+        break;
+    
       case 409:
         result.Response409 = await Models.NewSignUp409Response(response);
         break;
@@ -1536,63 +1253,11 @@ export class IIMP {
   
   
   // Throws IIMPError, or a network error
-  async SyncUserEvents(params: Models.SyncUserEventsRequest): Promise<SyncUserEventsResult> {
-    var result = {} as SyncUserEventsResult;
-    Models.ValidateSyncUserEventsRequest(params);
-
-    var path = "/api/client/events/sync";
-    
-    const url = new URL(this.baseURL + path);
-    
-    var queryParamCursor = paramToString(params.Cursor, "query parameter: Cursor", "number", false);
-    if (queryParamCursor !== "") {
-      url.searchParams.append("cursor", queryParamCursor);
-    }
-    
-    var queryParamLimit = paramToString(params.Limit, "query parameter: Limit", "number", false);
-    if (queryParamLimit !== "") {
-      url.searchParams.append("limit", queryParamLimit);
-    }
-    
-
-    var requestInit: RequestInit = {
-      method: "GET",
-    }
-    
-    
-    const request = new Request(url, this.addHeaders(requestInit));
-    const response = await fetch(request);
-    result.StatusCode = response.status;
-    switch (response.status) {
-    
-      case 200:
-        result.Response200 = await Models.NewSyncUserEvents200Response(response);
-        break;
-    
-      case 401:
-        result.Response401 = await Models.NewSyncUserEvents401Response(response);
-        break;
-    
-      case 500:
-        result.Response500 = await Models.NewSyncUserEvents500Response(response);
-        break;
-    
-      default:
-        result.UnknownResponse = {
-          StatusCode: response.status,
-          Resp: response,
-        };
-    }
-    return result;
-  }
-  
-  
-  // Throws IIMPError, or a network error
   async UpdateConversation(params: Models.UpdateConversationRequest): Promise<UpdateConversationResult> {
     var result = {} as UpdateConversationResult;
     Models.ValidateUpdateConversationRequest(params);
 
-    var path = "/api/client/conversations/{conversationId}";
+    var path = "/iimp/api/client/conversations/{conversationId}";
     
     var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
     path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
@@ -1652,17 +1317,17 @@ export class IIMP {
     var result = {} as UploadAttachmentResult;
     Models.ValidateUploadAttachmentRequest(params);
 
-    var path = "/api/client/attachments/{attachmentId}/bytes";
-    
-    var pathParamAttachmentId = paramToString(params.AttachmentId, "path parameter: AttachmentId", "string", true);
-    path = path.replace("{attachmentId}", encodeURIComponent(pathParamAttachmentId));
+    var path = "/iimp/api/client/attachments";
     
     const url = new URL(this.baseURL + path);
     
 
     var requestInit: RequestInit = {
-      method: "PUT",
+      method: "POST",
     }
+    
+    var headerFilename = paramToString(params.Filename, "header parameter: Filename", "string", true);
+    requestInit.headers = { ...requestInit.headers, "X-IIMP-Attachment-Filename": headerFilename };
     
     
     const request = new Request(url, this.addHeaders(requestInit));
@@ -1670,8 +1335,8 @@ export class IIMP {
     result.StatusCode = response.status;
     switch (response.status) {
     
-      case 204:
-        result.Response204 = await Models.NewUploadAttachment204Response(response);
+      case 201:
+        result.Response201 = await Models.NewUploadAttachment201Response(response);
         break;
     
       case 400:
@@ -1688,10 +1353,6 @@ export class IIMP {
     
       case 404:
         result.Response404 = await Models.NewUploadAttachment404Response(response);
-        break;
-    
-      case 409:
-        result.Response409 = await Models.NewUploadAttachment409Response(response);
         break;
     
       case 413:
@@ -1714,7 +1375,7 @@ export class IIMP {
 }
 
 
-type AddPublicKeyResult = {
+export type AddPublicKeyResult = {
   StatusCode: number;
   
   Response201: Models.AddPublicKey201Response;
@@ -1728,7 +1389,7 @@ type AddPublicKeyResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type ConversationFederationResult = {
+export type ConversationFederationResult = {
   StatusCode: number;
   
   Response200: Models.ConversationFederation200Response;
@@ -1746,17 +1407,55 @@ type ConversationFederationResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type DiscoverServerResult = {
+export type DiscoverServerResult = {
   StatusCode: number;
   
   Response200: Models.DiscoverServer200Response;
+  
+  Response404: Models.DiscoverServer404Response;
   
   Response500: Models.DiscoverServer500Response;
   
   UnknownResponse: UnknownStatusResponse;
 }
 
-type EditMessageResult = {
+export type DownloadAttachmentResult = {
+  StatusCode: number;
+  
+  Response200: Models.DownloadAttachment200Response;
+  
+  Response400: Models.DownloadAttachment400Response;
+  
+  Response401: Models.DownloadAttachment401Response;
+  
+  Response403: Models.DownloadAttachment403Response;
+  
+  Response404: Models.DownloadAttachment404Response;
+  
+  Response500: Models.DownloadAttachment500Response;
+  
+  UnknownResponse: UnknownStatusResponse;
+}
+
+export type DownloadAttachmentBytesFederationResult = {
+  StatusCode: number;
+  
+  Response200: Models.DownloadAttachmentBytesFederation200Response;
+  
+  Response400: Models.DownloadAttachmentBytesFederation400Response;
+  
+  Response401: Models.DownloadAttachmentBytesFederation401Response;
+  
+  Response403: Models.DownloadAttachmentBytesFederation403Response;
+  
+  Response404: Models.DownloadAttachmentBytesFederation404Response;
+  
+  Response500: Models.DownloadAttachmentBytesFederation500Response;
+  
+  UnknownResponse: UnknownStatusResponse;
+}
+
+export type EditMessageResult = {
   StatusCode: number;
   
   Response200: Models.EditMessage200Response;
@@ -1774,61 +1473,7 @@ type EditMessageResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type EditMessageForwardFederationResult = {
-  StatusCode: number;
-  
-  Response200: Models.EditMessageForwardFederation200Response;
-  
-  Response400: Models.EditMessageForwardFederation400Response;
-  
-  Response401: Models.EditMessageForwardFederation401Response;
-  
-  Response403: Models.EditMessageForwardFederation403Response;
-  
-  Response404: Models.EditMessageForwardFederation404Response;
-  
-  Response500: Models.EditMessageForwardFederation500Response;
-  
-  UnknownResponse: UnknownStatusResponse;
-}
-
-type FetchAttachmentBytesResult = {
-  StatusCode: number;
-  
-  Response200: Models.FetchAttachmentBytes200Response;
-  
-  Response400: Models.FetchAttachmentBytes400Response;
-  
-  Response401: Models.FetchAttachmentBytes401Response;
-  
-  Response403: Models.FetchAttachmentBytes403Response;
-  
-  Response404: Models.FetchAttachmentBytes404Response;
-  
-  Response500: Models.FetchAttachmentBytes500Response;
-  
-  UnknownResponse: UnknownStatusResponse;
-}
-
-type FetchAttachmentBytesFederationResult = {
-  StatusCode: number;
-  
-  Response200: Models.FetchAttachmentBytesFederation200Response;
-  
-  Response400: Models.FetchAttachmentBytesFederation400Response;
-  
-  Response401: Models.FetchAttachmentBytesFederation401Response;
-  
-  Response403: Models.FetchAttachmentBytesFederation403Response;
-  
-  Response404: Models.FetchAttachmentBytesFederation404Response;
-  
-  Response500: Models.FetchAttachmentBytesFederation500Response;
-  
-  UnknownResponse: UnknownStatusResponse;
-}
-
-type GetJWKSStoreResult = {
+export type GetJWKSStoreResult = {
   StatusCode: number;
   
   Response200: Models.GetJWKSStore200Response;
@@ -1838,7 +1483,7 @@ type GetJWKSStoreResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type GetUserInfoFederationResult = {
+export type GetUserInfoFederationResult = {
   StatusCode: number;
   
   Response200: Models.GetUserInfoFederation200Response;
@@ -1852,10 +1497,12 @@ type GetUserInfoFederationResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type GetUserPublicKeyResult = {
+export type GetUserPublicKeyResult = {
   StatusCode: number;
   
   Response200: Models.GetUserPublicKey200Response;
+  
+  Response400: Models.GetUserPublicKey400Response;
   
   Response404: Models.GetUserPublicKey404Response;
   
@@ -1864,10 +1511,12 @@ type GetUserPublicKeyResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type GetUserPublicKeyByIdResult = {
+export type GetUserPublicKeyByIdResult = {
   StatusCode: number;
   
   Response200: Models.GetUserPublicKeyById200Response;
+  
+  Response400: Models.GetUserPublicKeyById400Response;
   
   Response404: Models.GetUserPublicKeyById404Response;
   
@@ -1876,7 +1525,7 @@ type GetUserPublicKeyByIdResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type LoginResult = {
+export type LoginResult = {
   StatusCode: number;
   
   Response200: Models.Login200Response;
@@ -1890,10 +1539,12 @@ type LoginResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type LogoutResult = {
+export type LogoutResult = {
   StatusCode: number;
   
   Response204: Models.Logout204Response;
+  
+  Response400: Models.Logout400Response;
   
   Response401: Models.Logout401Response;
   
@@ -1902,7 +1553,7 @@ type LogoutResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type MessageFederationResult = {
+export type MessageFederationResult = {
   StatusCode: number;
   
   Response200: Models.MessageFederation200Response;
@@ -1920,41 +1571,7 @@ type MessageFederationResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type MessageForwardFederationResult = {
-  StatusCode: number;
-  
-  Response200: Models.MessageForwardFederation200Response;
-  
-  Response400: Models.MessageForwardFederation400Response;
-  
-  Response401: Models.MessageForwardFederation401Response;
-  
-  Response403: Models.MessageForwardFederation403Response;
-  
-  Response404: Models.MessageForwardFederation404Response;
-  
-  Response500: Models.MessageForwardFederation500Response;
-  
-  UnknownResponse: UnknownStatusResponse;
-}
-
-type NewAttachmentResult = {
-  StatusCode: number;
-  
-  Response201: Models.NewAttachment201Response;
-  
-  Response400: Models.NewAttachment400Response;
-  
-  Response401: Models.NewAttachment401Response;
-  
-  Response413: Models.NewAttachment413Response;
-  
-  Response500: Models.NewAttachment500Response;
-  
-  UnknownResponse: UnknownStatusResponse;
-}
-
-type NewConversationResult = {
+export type NewConversationResult = {
   StatusCode: number;
   
   Response201: Models.NewConversation201Response;
@@ -1972,7 +1589,7 @@ type NewConversationResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type NewMessageResult = {
+export type NewMessageResult = {
   StatusCode: number;
   
   Response201: Models.NewMessage201Response;
@@ -1990,7 +1607,21 @@ type NewMessageResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type ReactToMessageResult = {
+export type PullUserEventsResult = {
+  StatusCode: number;
+  
+  Response200: Models.PullUserEvents200Response;
+  
+  Response400: Models.PullUserEvents400Response;
+  
+  Response401: Models.PullUserEvents401Response;
+  
+  Response500: Models.PullUserEvents500Response;
+  
+  UnknownResponse: UnknownStatusResponse;
+}
+
+export type ReactToMessageResult = {
   StatusCode: number;
   
   Response200: Models.ReactToMessage200Response;
@@ -2008,25 +1639,7 @@ type ReactToMessageResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type ReactToMessageForwardFederationResult = {
-  StatusCode: number;
-  
-  Response200: Models.ReactToMessageForwardFederation200Response;
-  
-  Response400: Models.ReactToMessageForwardFederation400Response;
-  
-  Response401: Models.ReactToMessageForwardFederation401Response;
-  
-  Response403: Models.ReactToMessageForwardFederation403Response;
-  
-  Response404: Models.ReactToMessageForwardFederation404Response;
-  
-  Response500: Models.ReactToMessageForwardFederation500Response;
-  
-  UnknownResponse: UnknownStatusResponse;
-}
-
-type ReadMessageResult = {
+export type ReadMessageResult = {
   StatusCode: number;
   
   Response200: Models.ReadMessage200Response;
@@ -2044,25 +1657,7 @@ type ReadMessageResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type ReadMessageForwardFederationResult = {
-  StatusCode: number;
-  
-  Response200: Models.ReadMessageForwardFederation200Response;
-  
-  Response400: Models.ReadMessageForwardFederation400Response;
-  
-  Response401: Models.ReadMessageForwardFederation401Response;
-  
-  Response403: Models.ReadMessageForwardFederation403Response;
-  
-  Response404: Models.ReadMessageForwardFederation404Response;
-  
-  Response500: Models.ReadMessageForwardFederation500Response;
-  
-  UnknownResponse: UnknownStatusResponse;
-}
-
-type RedactMessageResult = {
+export type RedactMessageResult = {
   StatusCode: number;
   
   Response200: Models.RedactMessage200Response;
@@ -2080,28 +1675,12 @@ type RedactMessageResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type RedactMessageForwardFederationResult = {
-  StatusCode: number;
-  
-  Response200: Models.RedactMessageForwardFederation200Response;
-  
-  Response400: Models.RedactMessageForwardFederation400Response;
-  
-  Response401: Models.RedactMessageForwardFederation401Response;
-  
-  Response403: Models.RedactMessageForwardFederation403Response;
-  
-  Response404: Models.RedactMessageForwardFederation404Response;
-  
-  Response500: Models.RedactMessageForwardFederation500Response;
-  
-  UnknownResponse: UnknownStatusResponse;
-}
-
-type RefreshSessionResult = {
+export type RefreshSessionResult = {
   StatusCode: number;
   
   Response200: Models.RefreshSession200Response;
+  
+  Response400: Models.RefreshSession400Response;
   
   Response401: Models.RefreshSession401Response;
   
@@ -2110,7 +1689,7 @@ type RefreshSessionResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type RequestResetPasswordResult = {
+export type RequestResetPasswordResult = {
   StatusCode: number;
   
   Response200: Models.RequestResetPassword200Response;
@@ -2122,7 +1701,7 @@ type RequestResetPasswordResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type ResetPasswordResult = {
+export type ResetPasswordResult = {
   StatusCode: number;
   
   Response200: Models.ResetPassword200Response;
@@ -2134,12 +1713,14 @@ type ResetPasswordResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type SignUpResult = {
+export type SignUpResult = {
   StatusCode: number;
   
   Response201: Models.SignUp201Response;
   
   Response400: Models.SignUp400Response;
+  
+  Response403: Models.SignUp403Response;
   
   Response409: Models.SignUp409Response;
   
@@ -2148,19 +1729,7 @@ type SignUpResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type SyncUserEventsResult = {
-  StatusCode: number;
-  
-  Response200: Models.SyncUserEvents200Response;
-  
-  Response401: Models.SyncUserEvents401Response;
-  
-  Response500: Models.SyncUserEvents500Response;
-  
-  UnknownResponse: UnknownStatusResponse;
-}
-
-type UpdateConversationResult = {
+export type UpdateConversationResult = {
   StatusCode: number;
   
   Response200: Models.UpdateConversation200Response;
@@ -2178,10 +1747,10 @@ type UpdateConversationResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-type UploadAttachmentResult = {
+export type UploadAttachmentResult = {
   StatusCode: number;
   
-  Response204: Models.UploadAttachment204Response;
+  Response201: Models.UploadAttachment201Response;
   
   Response400: Models.UploadAttachment400Response;
   
@@ -2191,8 +1760,6 @@ type UploadAttachmentResult = {
   
   Response404: Models.UploadAttachment404Response;
   
-  Response409: Models.UploadAttachment409Response;
-  
   Response413: Models.UploadAttachment413Response;
   
   Response500: Models.UploadAttachment500Response;
@@ -2201,7 +1768,7 @@ type UploadAttachmentResult = {
 }
 
 
-type UnknownStatusResponse = {
+export type UnknownStatusResponse = {
   StatusCode: number;
   Resp: Response;
 }

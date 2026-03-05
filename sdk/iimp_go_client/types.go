@@ -31,7 +31,7 @@ func (e *IIMPError) Error() string {
 
 const (
 	AddPublicKeyRequestHTTPMethod = "POST"
-	AddPublicKeyRequestRoutePath  = "/api/client/keys"
+	AddPublicKeyRequestRoutePath  = "/iimp/api/client/keys"
 )
 
 // Add a new public key for end-to-end encryption.
@@ -157,7 +157,7 @@ func NewAddPublicKey500Response(resp *http.Response) (AddPublicKey500Response, e
 
 const (
 	ConversationFederationRequestHTTPMethod = "POST"
-	ConversationFederationRequestRoutePath  = "/api/federation/conversations"
+	ConversationFederationRequestRoutePath  = "/iimp/api/federation/conversations"
 )
 
 // \"FEDERATION\" Create/Update a conversation from another server. This endpoint is used by other servers to create/update a conversation that includes users from the local server. UPSERT operation should be performed by the receiving server.
@@ -172,7 +172,7 @@ type ConversationFederationRequest struct {
 
 type ConversationFederationRequestBody struct {
 
-	// A unique identifier for the conversation, typically a UUIDv7.
+	// A unique identifier for the conversation.
 	//
 	// Required
 	//
@@ -192,12 +192,18 @@ type ConversationFederationRequestBody struct {
 	// Must be non-empty
 	ConversationOwnerId string `json:"ConversationOwnerId"`
 
-	// The timestamp when the conversation was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+	// The timestamp when the conversation was created. Format => RFC3339.
 	//
 	// Required
 	//
 	// Must be non-empty
 	CreatedAt string `json:"CreatedAt"`
+
+	// A flag indicating whether the conversation is a Direct Message (DM) or a Group Conversation. A Direct Message conversation has exactly 2 participants (including the owner), while a Group Conversation has more than 2 participants.
+	//
+	// Required
+	//
+	IsDM bool `json:"IsDM"`
 
 	// A list of participants in the conversation. The owner of the conversation is also included in this list. Participants can be added or removed by the owner user. Contains at least 2 participants (including the owner) for a Direct Conversation and >2 participants for a Group Conversation.
 	//
@@ -209,21 +215,14 @@ type ConversationFederationRequestBody struct {
 
 type ConversationFederationRequestBodyParticipantsItem struct {
 
-	// The unique identifier of the conversation that the participant is part of. This is typically a UUIDv7.
-	//
-	// Required
-	//
-	// Must be non-empty
-	ConversationId string `json:"ConversationId"`
-
-	// The timestamp when the participant joined the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+	// The timestamp when the participant joined the conversation. Format => RFC3339.
 	//
 	// Required
 	//
 	// Must be non-empty
 	JoinedAt string `json:"JoinedAt"`
 
-	// The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
+	// The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => RFC3339. A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
 	//
 	// Optional
 	//
@@ -299,10 +298,6 @@ func (o *ConversationFederationRequestBody) Validate() error {
 	return nil
 }
 func (o *ConversationFederationRequestBodyParticipantsItem) Validate() error {
-
-	if strings.TrimSpace(o.ConversationId) == "" {
-		return fmt.Errorf("field 'ConversationId' must be non-empty")
-	}
 
 	if strings.TrimSpace(o.JoinedAt) == "" {
 		return fmt.Errorf("field 'JoinedAt' must be non-empty")
@@ -403,19 +398,12 @@ type DiscoverServer200Response struct {
 
 type DiscoverServer200ResponseBody struct {
 
-	// Canonical domain name of the server.
+	// Canonical domain name of the server. Includes the scheme, e.g. https://server-a.domain1.me
 	//
 	// Required
 	//
 	// Must be non-empty
 	Domain string `json:"Domain"`
-
-	// URL endpoint for federation with other IIMP servers.
-	//
-	// Required
-	//
-	// Must be non-empty
-	FederationEndpoint string `json:"FederationEndpoint"`
 
 	// IIMP protocol version supported by the server.
 	//
@@ -437,6 +425,16 @@ func NewDiscoverServer200Response(resp *http.Response) (DiscoverServer200Respons
 	return result, nil
 }
 
+type DiscoverServer404Response struct {
+}
+
+func NewDiscoverServer404Response(resp *http.Response) (DiscoverServer404Response, error) {
+	defer resp.Body.Close()
+	result := DiscoverServer404Response{}
+
+	return result, nil
+}
+
 type DiscoverServer500Response struct {
 }
 
@@ -448,8 +446,250 @@ func NewDiscoverServer500Response(resp *http.Response) (DiscoverServer500Respons
 }
 
 const (
+	DownloadAttachmentRequestHTTPMethod = "GET"
+	DownloadAttachmentRequestRoutePath  = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes"
+)
+
+// Download the bytes of an attachment for a message in a conversation. This is a NOOP endpoint for documentation, since the actual fetching of the attachment bytes is to be done by the client.
+type DownloadAttachmentRequest struct {
+
+	// Source: path parameter "{conversationId}"
+	//
+
+	// The unique identifier of the conversation that the message belongs to.
+	//
+	// Required
+	ConversationId string
+
+	// Source: path parameter "{messageId}"
+	//
+
+	// The unique identifier of the message that the attachment belongs to.
+	//
+	// Required
+	MessageId string
+
+	// Source: path parameter "{fileId}"
+	//
+
+	// The unique identifier of the file to fetch. This should correspond to an attachment that was previously uploaded to the server using the UploadAttachment endpoint.
+	//
+	// Required
+	FileId string
+
+	// Authentication parameters
+	Auth DownloadAttachmentRequestAuthParams
+}
+
+type DownloadAttachmentRequestAuthParams struct {
+
+	// Required Authentication Method
+	// Source: header "Authorization"
+	//
+	// A token used to authenticate the client session. This token is obtained after a successful login and must be included in the header of subsequent requests to access protected resources.
+	//
+	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
+	//
+	Authorization *string
+}
+
+func (req *DownloadAttachmentRequest) Validate() error {
+
+	// Authentication parameters validation
+
+	// Validate required auth parameters
+
+	if req.Auth.Authorization == nil {
+		return fmt.Errorf("missing required authentication parameter: Authorization")
+	}
+
+	return nil
+}
+
+type DownloadAttachment200Response struct {
+}
+
+func NewDownloadAttachment200Response(resp *http.Response) (DownloadAttachment200Response, error) {
+	defer resp.Body.Close()
+	result := DownloadAttachment200Response{}
+
+	return result, nil
+}
+
+type DownloadAttachment400Response struct {
+}
+
+func NewDownloadAttachment400Response(resp *http.Response) (DownloadAttachment400Response, error) {
+	defer resp.Body.Close()
+	result := DownloadAttachment400Response{}
+
+	return result, nil
+}
+
+type DownloadAttachment401Response struct {
+}
+
+func NewDownloadAttachment401Response(resp *http.Response) (DownloadAttachment401Response, error) {
+	defer resp.Body.Close()
+	result := DownloadAttachment401Response{}
+
+	return result, nil
+}
+
+type DownloadAttachment403Response struct {
+}
+
+func NewDownloadAttachment403Response(resp *http.Response) (DownloadAttachment403Response, error) {
+	defer resp.Body.Close()
+	result := DownloadAttachment403Response{}
+
+	return result, nil
+}
+
+type DownloadAttachment404Response struct {
+}
+
+func NewDownloadAttachment404Response(resp *http.Response) (DownloadAttachment404Response, error) {
+	defer resp.Body.Close()
+	result := DownloadAttachment404Response{}
+
+	return result, nil
+}
+
+type DownloadAttachment500Response struct {
+}
+
+func NewDownloadAttachment500Response(resp *http.Response) (DownloadAttachment500Response, error) {
+	defer resp.Body.Close()
+	result := DownloadAttachment500Response{}
+
+	return result, nil
+}
+
+const (
+	DownloadAttachmentBytesFederationRequestHTTPMethod = "GET"
+	DownloadAttachmentBytesFederationRequestRoutePath  = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes"
+)
+
+// \"FEDERATION\" Download the bytes of an attachment from another server. This is a noop endpoint for documentation purposes, the server should implement fetching the actual bytes using the provided endpoint. Server must implement this, requesting server needs to fetch the bytes NOT using the SDK.
+type DownloadAttachmentBytesFederationRequest struct {
+
+	// Source: path parameter "{fileId}"
+	//
+
+	// Unique identifier of the file to fetch.
+	//
+	// Required
+	FileId string
+
+	// Source: path parameter "{messageId}"
+	//
+
+	// Unique identifier of the message that the file/attachment belongs to.
+	//
+	// Required
+	MessageId string
+
+	// Source: path parameter "{conversationId}"
+	//
+
+	// Unique identifier of the conversation that the message belongs to.
+	//
+	// Required
+	ConversationId string
+
+	// Authentication parameters
+	Auth DownloadAttachmentBytesFederationRequestAuthParams
+}
+
+type DownloadAttachmentBytesFederationRequestAuthParams struct {
+
+	// Required Authentication Method
+	// Source: header "Authorization"
+	//
+	// Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint.
+	//
+	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
+	//
+	Authorization *string
+}
+
+func (req *DownloadAttachmentBytesFederationRequest) Validate() error {
+
+	// Authentication parameters validation
+
+	// Validate required auth parameters
+
+	if req.Auth.Authorization == nil {
+		return fmt.Errorf("missing required authentication parameter: Authorization")
+	}
+
+	return nil
+}
+
+type DownloadAttachmentBytesFederation200Response struct {
+}
+
+func NewDownloadAttachmentBytesFederation200Response(resp *http.Response) (DownloadAttachmentBytesFederation200Response, error) {
+	defer resp.Body.Close()
+	result := DownloadAttachmentBytesFederation200Response{}
+
+	return result, nil
+}
+
+type DownloadAttachmentBytesFederation400Response struct {
+}
+
+func NewDownloadAttachmentBytesFederation400Response(resp *http.Response) (DownloadAttachmentBytesFederation400Response, error) {
+	defer resp.Body.Close()
+	result := DownloadAttachmentBytesFederation400Response{}
+
+	return result, nil
+}
+
+type DownloadAttachmentBytesFederation401Response struct {
+}
+
+func NewDownloadAttachmentBytesFederation401Response(resp *http.Response) (DownloadAttachmentBytesFederation401Response, error) {
+	defer resp.Body.Close()
+	result := DownloadAttachmentBytesFederation401Response{}
+
+	return result, nil
+}
+
+type DownloadAttachmentBytesFederation403Response struct {
+}
+
+func NewDownloadAttachmentBytesFederation403Response(resp *http.Response) (DownloadAttachmentBytesFederation403Response, error) {
+	defer resp.Body.Close()
+	result := DownloadAttachmentBytesFederation403Response{}
+
+	return result, nil
+}
+
+type DownloadAttachmentBytesFederation404Response struct {
+}
+
+func NewDownloadAttachmentBytesFederation404Response(resp *http.Response) (DownloadAttachmentBytesFederation404Response, error) {
+	defer resp.Body.Close()
+	result := DownloadAttachmentBytesFederation404Response{}
+
+	return result, nil
+}
+
+type DownloadAttachmentBytesFederation500Response struct {
+}
+
+func NewDownloadAttachmentBytesFederation500Response(resp *http.Response) (DownloadAttachmentBytesFederation500Response, error) {
+	defer resp.Body.Close()
+	result := DownloadAttachmentBytesFederation500Response{}
+
+	return result, nil
+}
+
+const (
 	EditMessageRequestHTTPMethod = "PUT"
-	EditMessageRequestRoutePath  = "/api/client/conversations/{conversationId}/messages/{messageId}"
+	EditMessageRequestRoutePath  = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}"
 )
 
 // Edit an existing message in a conversation. Only the sender of the message can edit it.
@@ -458,7 +698,7 @@ type EditMessageRequest struct {
 	// Source: path parameter "{conversationId}"
 	//
 
-	// The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+	// The unique identifier of the conversation that the message belongs to.
 	//
 	// Required
 	ConversationId string
@@ -466,7 +706,7 @@ type EditMessageRequest struct {
 	// Source: path parameter "{messageId}"
 	//
 
-	// The unique identifier of the message to edit. This is typically a UUIDv7
+	// The unique identifier of the message to edit.
 	//
 	// Required
 	MessageId string
@@ -494,7 +734,7 @@ type EditMessageRequestBodyMessageContent struct {
 	// Must be non-empty
 	Content string `json:"Content"`
 
-	// Encryption details for the recipients of the message.
+	// Encryption details for the recipients of the message. The sender client should not include details for participants of a convo where RemovedAt != nil.
 	//
 	// Required
 	//
@@ -508,7 +748,7 @@ type EditMessageRequestBodyMessageContent struct {
 	// Must be non-empty
 	Nonce string `json:"Nonce"`
 
-	// The timestamp when the message content was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
+	// The timestamp when the message content was created. Format => RFC3339. This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
 	//
 	// Required
 	//
@@ -719,547 +959,6 @@ func NewEditMessage500Response(resp *http.Response) (EditMessage500Response, err
 }
 
 const (
-	EditMessageForwardFederationRequestHTTPMethod = "PUT"
-	EditMessageForwardFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages/{messageId}/edit/forward"
-)
-
-// \"FEDERATION\" Edit a message in a conversation on another server.
-type EditMessageForwardFederationRequest struct {
-
-	// Source: path parameter "{conversationId}"
-	//
-
-	// Unique identifier of the conversation to edit the message in.
-	//
-	// Required
-	ConversationId string
-
-	// Source: path parameter "{messageId}"
-	//
-
-	// Unique identifier of the message to edit.
-	//
-	// Required
-	MessageId string
-
-	// Authentication parameters
-	Auth EditMessageForwardFederationRequestAuthParams
-
-	// Request body
-	Body EditMessageForwardFederationRequestBody
-}
-
-type EditMessageForwardFederationRequestBody struct {
-
-	// User ID of the sender of the message to edit. This should be in the format localpart@domain and must belong to the requesting server and should be equal to the sender's id on the receiving server's message.
-	//
-	// Required
-	//
-	// Must be non-empty
-	SenderUserId string `json:"SenderUserId"`
-
-	// Updated message details.
-	//
-	// Required
-	//
-	UpdatedMessage EditMessageForwardFederationRequestBodyUpdatedMessage `json:"UpdatedMessage"`
-}
-
-type EditMessageForwardFederationRequestBodyUpdatedMessage struct {
-
-	// Required
-	//
-	MessageContent EditMessageForwardFederationRequestBodyUpdatedMessageMessageContent `json:"MessageContent"`
-}
-
-type EditMessageForwardFederationRequestBodyUpdatedMessageMessageContent struct {
-
-	// The content of the message to be sent in the conversation. The content should be encrypted using an AES key, and the AES key should be encrypted for each recipient using their respective public keys. The server will store the encrypted message content and the encrypted keys for each recipient, allowing the recipients to decrypt the AES key using their private keys and then use it to decrypt the message content.
-	//
-	// Required
-	//
-	// Must be non-empty
-	Content string `json:"Content"`
-
-	// Encryption details for the recipients of the message.
-	//
-	// Required
-	//
-	// Must be non-empty
-	EncryptionData []EditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItem `json:"EncryptionData"`
-
-	// The nonce (or initialization vector) used in the AES encryption of the message content. This should be a unique value for each message encrypted with the same AES key to ensure security. The nonce is required for the decryption process, as it is used along with the AES key to decrypt the message content. The server will store the nonce along with the encrypted message content and deliver it to the recipients, allowing them to use it in the decryption process. The nonce should be generated securely (e.g., using a cryptographically secure random number generator) and should be of 12 bytes (96 bits) in length for AES-256-GCM encryption.
-	//
-	// Required
-	//
-	// Must be non-empty
-	Nonce string `json:"Nonce"`
-
-	// The timestamp when the message content was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
-	//
-	// Required
-	//
-	// Must be non-empty
-	Timestamp string `json:"Timestamp"`
-}
-
-type EditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItem struct {
-
-	// Encryption details for a recipient of the message.
-	//
-	// Required
-	//
-	Encryption EditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItemEncryption `json:"Encryption"`
-
-	// User ID of the recipient of the message. (localpart@domain). This field is included to associate the encryption details with the specific recipient, allowing the server to deliver the correct encrypted key and nonce to each recipient along with the encrypted message content.
-	//
-	// Required
-	//
-	// Must be non-empty
-	RecipientId string `json:"RecipientId"`
-}
-
-type EditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItemEncryption struct {
-
-	// The AES key used to encrypt the message content, encrypted with the recipient's public key using an asymmetric encryption algorithm (X25519 + HKDF). The server will store this encrypted key and deliver it to the recipient along with the encrypted message content, allowing the recipient to decrypt the AES key using their private key and then use it to decrypt the message content.
-	//
-	// Required
-	//
-	// Must be non-empty
-	EncryptedKey string `json:"EncryptedKey"`
-
-	// The nonce used in the encryption of the AES key for this recipient. This should be a unique value for each encrypted key to ensure security. The server will store this nonce along with the encrypted key and deliver it to the recipient, allowing them to use it in the decryption process. The nonce should be generated securely (e.g., using a cryptographically secure random number generator) and should be of 12 bytes (96 bits) in length for AES-256-GCM encryption.
-	//
-	// Required
-	//
-	// Must be non-empty
-	EncryptedKeyNonce string `json:"EncryptedKeyNonce"`
-
-	// An ephemeral public key generated by the sender for this message, used in the encryption process (X25519).
-	//
-	// Required
-	//
-	// Must be non-empty
-	EphemeralPublicKey string `json:"EphemeralPublicKey"`
-
-	// The unique identifier of the public key that was used to encrypt the message for this recipient. This should correspond to a KeyId returned by the server when the client added their public keys.
-	//
-	// Required
-	//
-	// Must be non-empty
-	KeyId string `json:"KeyId"`
-}
-
-type EditMessageForwardFederationRequestAuthParams struct {
-
-	// Required Authentication Method
-	// Source: header "Authorization"
-	//
-	// Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint.
-	//
-	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
-	//
-	Authorization *string
-}
-
-func (req *EditMessageForwardFederationRequest) Validate() error {
-
-	if err := req.Body.Validate(); err != nil {
-		return err
-	}
-	// Authentication parameters validation
-
-	// Validate required auth parameters
-
-	if req.Auth.Authorization == nil {
-		return fmt.Errorf("missing required authentication parameter: Authorization")
-	}
-
-	return nil
-}
-
-func (o *EditMessageForwardFederationRequestBody) Validate() error {
-
-	if strings.TrimSpace(o.SenderUserId) == "" {
-		return fmt.Errorf("field 'SenderUserId' must be non-empty")
-	}
-
-	if err := o.UpdatedMessage.Validate(); err != nil {
-		return fmt.Errorf("field 'UpdatedMessage' is invalid: %w", err)
-	}
-
-	return nil
-}
-func (o *EditMessageForwardFederationRequestBodyUpdatedMessage) Validate() error {
-
-	if err := o.MessageContent.Validate(); err != nil {
-		return fmt.Errorf("field 'MessageContent' is invalid: %w", err)
-	}
-
-	return nil
-}
-func (o *EditMessageForwardFederationRequestBodyUpdatedMessageMessageContent) Validate() error {
-
-	if strings.TrimSpace(o.Content) == "" {
-		return fmt.Errorf("field 'Content' must be non-empty")
-	}
-
-	if len(o.EncryptionData) == 0 {
-		return fmt.Errorf("field 'EncryptionData' must be non-empty")
-	}
-
-	for idx, item := range o.EncryptionData {
-		if err := item.Validate(); err != nil {
-			return fmt.Errorf("element %d of field 'EncryptionData' is invalid: %w", idx, err)
-		}
-	}
-
-	if strings.TrimSpace(o.Nonce) == "" {
-		return fmt.Errorf("field 'Nonce' must be non-empty")
-	}
-
-	if strings.TrimSpace(o.Timestamp) == "" {
-		return fmt.Errorf("field 'Timestamp' must be non-empty")
-	}
-
-	return nil
-}
-func (o *EditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItem) Validate() error {
-
-	if err := o.Encryption.Validate(); err != nil {
-		return fmt.Errorf("field 'Encryption' is invalid: %w", err)
-	}
-
-	if strings.TrimSpace(o.RecipientId) == "" {
-		return fmt.Errorf("field 'RecipientId' must be non-empty")
-	}
-
-	return nil
-}
-func (o *EditMessageForwardFederationRequestBodyUpdatedMessageMessageContentEncryptionDataItemEncryption) Validate() error {
-
-	if strings.TrimSpace(o.EncryptedKey) == "" {
-		return fmt.Errorf("field 'EncryptedKey' must be non-empty")
-	}
-
-	if strings.TrimSpace(o.EncryptedKeyNonce) == "" {
-		return fmt.Errorf("field 'EncryptedKeyNonce' must be non-empty")
-	}
-
-	if strings.TrimSpace(o.EphemeralPublicKey) == "" {
-		return fmt.Errorf("field 'EphemeralPublicKey' must be non-empty")
-	}
-
-	if strings.TrimSpace(o.KeyId) == "" {
-		return fmt.Errorf("field 'KeyId' must be non-empty")
-	}
-
-	return nil
-}
-
-type EditMessageForwardFederation200Response struct {
-}
-
-func NewEditMessageForwardFederation200Response(resp *http.Response) (EditMessageForwardFederation200Response, error) {
-	defer resp.Body.Close()
-	result := EditMessageForwardFederation200Response{}
-
-	return result, nil
-}
-
-type EditMessageForwardFederation400Response struct {
-}
-
-func NewEditMessageForwardFederation400Response(resp *http.Response) (EditMessageForwardFederation400Response, error) {
-	defer resp.Body.Close()
-	result := EditMessageForwardFederation400Response{}
-
-	return result, nil
-}
-
-type EditMessageForwardFederation401Response struct {
-}
-
-func NewEditMessageForwardFederation401Response(resp *http.Response) (EditMessageForwardFederation401Response, error) {
-	defer resp.Body.Close()
-	result := EditMessageForwardFederation401Response{}
-
-	return result, nil
-}
-
-type EditMessageForwardFederation403Response struct {
-}
-
-func NewEditMessageForwardFederation403Response(resp *http.Response) (EditMessageForwardFederation403Response, error) {
-	defer resp.Body.Close()
-	result := EditMessageForwardFederation403Response{}
-
-	return result, nil
-}
-
-type EditMessageForwardFederation404Response struct {
-}
-
-func NewEditMessageForwardFederation404Response(resp *http.Response) (EditMessageForwardFederation404Response, error) {
-	defer resp.Body.Close()
-	result := EditMessageForwardFederation404Response{}
-
-	return result, nil
-}
-
-type EditMessageForwardFederation500Response struct {
-}
-
-func NewEditMessageForwardFederation500Response(resp *http.Response) (EditMessageForwardFederation500Response, error) {
-	defer resp.Body.Close()
-	result := EditMessageForwardFederation500Response{}
-
-	return result, nil
-}
-
-const (
-	FetchAttachmentBytesRequestHTTPMethod = "GET"
-	FetchAttachmentBytesRequestRoutePath  = "/api/client/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes"
-)
-
-// Fetch the bytes of an attachment for a message in a conversation. This is a NOOP endpoint for documentation, since the actual fetching of the attachment bytes is to be done by the client.
-type FetchAttachmentBytesRequest struct {
-
-	// Source: path parameter "{conversationId}"
-	//
-
-	// The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
-	//
-	// Required
-	ConversationId string
-
-	// Source: path parameter "{messageId}"
-	//
-
-	// The unique identifier of the message that the attachment belongs to. This is typically a UUIDv7.
-	//
-	// Required
-	MessageId string
-
-	// Source: path parameter "{attachmentId}"
-	//
-
-	// The unique identifier of the attachment to fetch. This is typically a UUIDv7 and should correspond to an attachment that was previously uploaded to the server using the NewAttachment endpoint.
-	//
-	// Required
-	AttachmentId string
-
-	// Authentication parameters
-	Auth FetchAttachmentBytesRequestAuthParams
-}
-
-type FetchAttachmentBytesRequestAuthParams struct {
-
-	// Required Authentication Method
-	// Source: header "Authorization"
-	//
-	// A token used to authenticate the client session. This token is obtained after a successful login and must be included in the header of subsequent requests to access protected resources.
-	//
-	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
-	//
-	Authorization *string
-}
-
-func (req *FetchAttachmentBytesRequest) Validate() error {
-
-	// Authentication parameters validation
-
-	// Validate required auth parameters
-
-	if req.Auth.Authorization == nil {
-		return fmt.Errorf("missing required authentication parameter: Authorization")
-	}
-
-	return nil
-}
-
-type FetchAttachmentBytes200Response struct {
-}
-
-func NewFetchAttachmentBytes200Response(resp *http.Response) (FetchAttachmentBytes200Response, error) {
-	defer resp.Body.Close()
-	result := FetchAttachmentBytes200Response{}
-
-	return result, nil
-}
-
-type FetchAttachmentBytes400Response struct {
-}
-
-func NewFetchAttachmentBytes400Response(resp *http.Response) (FetchAttachmentBytes400Response, error) {
-	defer resp.Body.Close()
-	result := FetchAttachmentBytes400Response{}
-
-	return result, nil
-}
-
-type FetchAttachmentBytes401Response struct {
-}
-
-func NewFetchAttachmentBytes401Response(resp *http.Response) (FetchAttachmentBytes401Response, error) {
-	defer resp.Body.Close()
-	result := FetchAttachmentBytes401Response{}
-
-	return result, nil
-}
-
-type FetchAttachmentBytes403Response struct {
-}
-
-func NewFetchAttachmentBytes403Response(resp *http.Response) (FetchAttachmentBytes403Response, error) {
-	defer resp.Body.Close()
-	result := FetchAttachmentBytes403Response{}
-
-	return result, nil
-}
-
-type FetchAttachmentBytes404Response struct {
-}
-
-func NewFetchAttachmentBytes404Response(resp *http.Response) (FetchAttachmentBytes404Response, error) {
-	defer resp.Body.Close()
-	result := FetchAttachmentBytes404Response{}
-
-	return result, nil
-}
-
-type FetchAttachmentBytes500Response struct {
-}
-
-func NewFetchAttachmentBytes500Response(resp *http.Response) (FetchAttachmentBytes500Response, error) {
-	defer resp.Body.Close()
-	result := FetchAttachmentBytes500Response{}
-
-	return result, nil
-}
-
-const (
-	FetchAttachmentBytesFederationRequestHTTPMethod = "GET"
-	FetchAttachmentBytesFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{attachmentId}/bytes"
-)
-
-// \"FEDERATION\" Fetch the bytes of an attachment from another server. This is a noop endpoint for documentation purposes, the server should implement fetching the actual bytes using the provided endpoint. Server must implement this, requesting server needs to fetch the bytes NOT using the SDK.
-type FetchAttachmentBytesFederationRequest struct {
-
-	// Source: path parameter "{attachmentId}"
-	//
-
-	// Unique identifier of the attachment to fetch.
-	//
-	// Required
-	AttachmentId string
-
-	// Source: path parameter "{messageId}"
-	//
-
-	// Unique identifier of the message that the attachment belongs to.
-	//
-	// Required
-	MessageId string
-
-	// Source: path parameter "{conversationId}"
-	//
-
-	// Unique identifier of the conversation that the message belongs to.
-	//
-	// Required
-	ConversationId string
-
-	// Authentication parameters
-	Auth FetchAttachmentBytesFederationRequestAuthParams
-}
-
-type FetchAttachmentBytesFederationRequestAuthParams struct {
-
-	// Required Authentication Method
-	// Source: header "Authorization"
-	//
-	// Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint.
-	//
-	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
-	//
-	Authorization *string
-}
-
-func (req *FetchAttachmentBytesFederationRequest) Validate() error {
-
-	// Authentication parameters validation
-
-	// Validate required auth parameters
-
-	if req.Auth.Authorization == nil {
-		return fmt.Errorf("missing required authentication parameter: Authorization")
-	}
-
-	return nil
-}
-
-type FetchAttachmentBytesFederation200Response struct {
-}
-
-func NewFetchAttachmentBytesFederation200Response(resp *http.Response) (FetchAttachmentBytesFederation200Response, error) {
-	defer resp.Body.Close()
-	result := FetchAttachmentBytesFederation200Response{}
-
-	return result, nil
-}
-
-type FetchAttachmentBytesFederation400Response struct {
-}
-
-func NewFetchAttachmentBytesFederation400Response(resp *http.Response) (FetchAttachmentBytesFederation400Response, error) {
-	defer resp.Body.Close()
-	result := FetchAttachmentBytesFederation400Response{}
-
-	return result, nil
-}
-
-type FetchAttachmentBytesFederation401Response struct {
-}
-
-func NewFetchAttachmentBytesFederation401Response(resp *http.Response) (FetchAttachmentBytesFederation401Response, error) {
-	defer resp.Body.Close()
-	result := FetchAttachmentBytesFederation401Response{}
-
-	return result, nil
-}
-
-type FetchAttachmentBytesFederation403Response struct {
-}
-
-func NewFetchAttachmentBytesFederation403Response(resp *http.Response) (FetchAttachmentBytesFederation403Response, error) {
-	defer resp.Body.Close()
-	result := FetchAttachmentBytesFederation403Response{}
-
-	return result, nil
-}
-
-type FetchAttachmentBytesFederation404Response struct {
-}
-
-func NewFetchAttachmentBytesFederation404Response(resp *http.Response) (FetchAttachmentBytesFederation404Response, error) {
-	defer resp.Body.Close()
-	result := FetchAttachmentBytesFederation404Response{}
-
-	return result, nil
-}
-
-type FetchAttachmentBytesFederation500Response struct {
-}
-
-func NewFetchAttachmentBytesFederation500Response(resp *http.Response) (FetchAttachmentBytesFederation500Response, error) {
-	defer resp.Body.Close()
-	result := FetchAttachmentBytesFederation500Response{}
-
-	return result, nil
-}
-
-const (
 	GetJWKSStoreRequestHTTPMethod = "GET"
 	GetJWKSStoreRequestRoutePath  = "/.well-known/iimp/jwks"
 )
@@ -1370,7 +1069,7 @@ func NewGetJWKSStore500Response(resp *http.Response) (GetJWKSStore500Response, e
 
 const (
 	GetUserInfoFederationRequestHTTPMethod = "GET"
-	GetUserInfoFederationRequestRoutePath  = "/api/federation/users/{userId}"
+	GetUserInfoFederationRequestRoutePath  = "/iimp/api/federation/users/{userId}"
 )
 
 // \"FEDERATION\" Retrieve information about a user for federation purposes. This endpoint is used by other servers to fetch details about a user, such as their display name and more.
@@ -1483,7 +1182,7 @@ const (
 	GetUserPublicKeyRequestRoutePath  = "/.well-known/iimp/keys/users/{userId}"
 )
 
-// Retrieve the public key associated with a specific user.
+// Retrieve the latest/most recent public key associated with a specific user.
 type GetUserPublicKeyRequest struct {
 
 	// Source: path parameter "{userId}"
@@ -1524,7 +1223,7 @@ type GetUserPublicKey200ResponseBody struct {
 	// Must be non-empty
 	PublicKey string `json:"PublicKey"`
 
-	// Timestamp indicating when the public key was uploaded, in ISO 8601 format.
+	// Timestamp indicating when the public key was uploaded, in RFC3339 format.
 	//
 	// Required
 	//
@@ -1547,6 +1246,16 @@ func NewGetUserPublicKey200Response(resp *http.Response) (GetUserPublicKey200Res
 	if err := decoder.Decode(&result.Body); err != nil {
 		return result, err
 	}
+
+	return result, nil
+}
+
+type GetUserPublicKey400Response struct {
+}
+
+func NewGetUserPublicKey400Response(resp *http.Response) (GetUserPublicKey400Response, error) {
+	defer resp.Body.Close()
+	result := GetUserPublicKey400Response{}
 
 	return result, nil
 }
@@ -1625,7 +1334,7 @@ type GetUserPublicKeyById200ResponseBody struct {
 	// Must be non-empty
 	PublicKey string `json:"PublicKey"`
 
-	// Timestamp indicating when the public key was uploaded, in ISO 8601 format.
+	// Timestamp indicating when the public key was uploaded, in RFC3339 format.
 	//
 	// Required
 	//
@@ -1652,6 +1361,16 @@ func NewGetUserPublicKeyById200Response(resp *http.Response) (GetUserPublicKeyBy
 	return result, nil
 }
 
+type GetUserPublicKeyById400Response struct {
+}
+
+func NewGetUserPublicKeyById400Response(resp *http.Response) (GetUserPublicKeyById400Response, error) {
+	defer resp.Body.Close()
+	result := GetUserPublicKeyById400Response{}
+
+	return result, nil
+}
+
 type GetUserPublicKeyById404Response struct {
 }
 
@@ -1674,7 +1393,7 @@ func NewGetUserPublicKeyById500Response(resp *http.Response) (GetUserPublicKeyBy
 
 const (
 	LoginRequestHTTPMethod = "POST"
-	LoginRequestRoutePath  = "/api/client/login"
+	LoginRequestRoutePath  = "/iimp/api/client/login"
 )
 
 // Authenticate a user and establish a session.
@@ -1725,11 +1444,48 @@ func (o *LoginRequestBody) Validate() error {
 }
 
 type Login200Response struct {
+
+	// Response body
+	Body Login200ResponseBody
+}
+
+type Login200ResponseBody struct {
+
+	// A new token used to refresh the session token when it expires. Previous refresh tokens are invalidated when a new refresh token is issued.
+	//
+	// Required
+	//
+	// Must be non-empty
+	RefreshToken string `json:"RefreshToken"`
+
+	// The timestamp of when the refresh token expires. Format => RFC3339
+	//
+	// Required
+	//
+	RefreshTokenExpiry string `json:"RefreshTokenExpiry"`
+
+	// A new token used to authenticate the client session. This token must be included in the header of subsequent requests to access protected resources.
+	//
+	// Required
+	//
+	// Must be non-empty
+	SessionToken string `json:"SessionToken"`
+
+	// The timestamp of when the session token expires. Format => RFC3339
+	//
+	// Required
+	//
+	SessionTokenExpiry string `json:"SessionTokenExpiry"`
 }
 
 func NewLogin200Response(resp *http.Response) (Login200Response, error) {
 	defer resp.Body.Close()
 	result := Login200Response{}
+
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(&result.Body); err != nil {
+		return result, err
+	}
 
 	return result, nil
 }
@@ -1766,7 +1522,7 @@ func NewLogin500Response(resp *http.Response) (Login500Response, error) {
 
 const (
 	LogoutRequestHTTPMethod = "POST"
-	LogoutRequestRoutePath  = "/api/client/logout"
+	LogoutRequestRoutePath  = "/iimp/api/client/logout"
 )
 
 // Log out the current user and invalidate the session.
@@ -1811,6 +1567,16 @@ func NewLogout204Response(resp *http.Response) (Logout204Response, error) {
 	return result, nil
 }
 
+type Logout400Response struct {
+}
+
+func NewLogout400Response(resp *http.Response) (Logout400Response, error) {
+	defer resp.Body.Close()
+	result := Logout400Response{}
+
+	return result, nil
+}
+
 type Logout401Response struct {
 }
 
@@ -1833,7 +1599,7 @@ func NewLogout500Response(resp *http.Response) (Logout500Response, error) {
 
 const (
 	MessageFederationRequestHTTPMethod = "POST"
-	MessageFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages"
+	MessageFederationRequestRoutePath  = "/iimp/api/federation/conversations/{conversationId}/messages"
 )
 
 // \"FEDERATION\" Send a new message/update to an existing message model to a conversation from another server. This endpoint is used by other servers to send messages to a conversation that includes users from the local server. The request will include details about the message and its sender. Upsert operation must be performed by the receiving server.
@@ -1860,7 +1626,7 @@ type MessageFederationRequestBody struct {
 	//
 	// Optional
 	//
-	Attachments []string `json:"Attachments,omitempty"`
+	Attachments []MessageFederationRequestBodyAttachmentsItem `json:"Attachments,omitempty"`
 
 	// A list of message contents for the message, ordered by their version in Ascending Order. The original message sent by the client will have version 1. Each time the message is edited, a new MessageContent object is added to this list with the version number incremented by 1. This allows the server and clients to maintain a history of edits for each message, enabling features such as edit history viewing and audit trails.
 	//
@@ -1869,7 +1635,7 @@ type MessageFederationRequestBody struct {
 	// Must be non-empty
 	Contents []MessageFederationRequestBodyContentsItem `json:"Contents"`
 
-	// The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+	// The unique identifier of the conversation that the message belongs to.
 	//
 	// Required
 	//
@@ -1882,7 +1648,7 @@ type MessageFederationRequestBody struct {
 	//
 	IsRedacted bool `json:"IsRedacted"`
 
-	// A unique identifier for the message, typically a UUIDv7.
+	// A unique identifier for the message.
 	//
 	// Required
 	//
@@ -1896,7 +1662,7 @@ type MessageFederationRequestBody struct {
 	// Must be non-empty
 	SenderUserId string `json:"SenderUserId"`
 
-	// The timestamp when the message was originally sent. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message was sent, which can be useful for ordering messages and displaying timestamps in the client applications.
+	// The timestamp when the message was originally sent. Format => RFC3339. This field is included to provide context about when the message was sent, which can be useful for ordering messages and displaying timestamps in the client applications.
 	//
 	// Required
 	//
@@ -1909,6 +1675,43 @@ type MessageFederationRequestBody struct {
 	//
 	// Must be non-empty
 	UserSpecificData []MessageFederationRequestBodyUserSpecificDataItem `json:"UserSpecificData"`
+}
+
+type MessageFederationRequestBodyAttachmentsItem struct {
+
+	// The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
+	//
+	// Required
+	//
+	// Must be non-empty
+	ContentType string `json:"ContentType"`
+
+	// A hash of the attachment file content (SHA-256 hash) used for integrity verification. The server can use this hash to verify that the attachment file has not been tampered with during storage or transmission.
+	//
+	// Required
+	//
+	// Must be non-empty
+	FileHash string `json:"FileHash"`
+
+	// A unique identifier for the attachment. Sender's server generates this ID when the attachment is uploaded and returns it to the sender client, which then includes it in the message payload when sending a message with attachments. The server will store the attachment and deliver it to the recipients along with the message content.
+	//
+	// Required
+	//
+	// Must be non-empty
+	FileId string `json:"FileId"`
+
+	// The original filename of the attachment.
+	//
+	// Required
+	//
+	// Must be non-empty
+	Filename string `json:"Filename"`
+
+	// The size of the attachment in bytes. The server may enforce a maximum attachment size (1000MB) and reject attachments that exceed this limit.
+	//
+	// Required
+	//
+	Size float64 `json:"Size"`
 }
 
 type MessageFederationRequestBodyContentsItem struct {
@@ -1933,7 +1736,7 @@ type MessageFederationRequestBodyContentsItemMessageContent struct {
 	// Must be non-empty
 	Content string `json:"Content"`
 
-	// Encryption details for the recipients of the message.
+	// Encryption details for the recipients of the message. The sender client should not include details for participants of a convo where RemovedAt != nil.
 	//
 	// Required
 	//
@@ -1947,7 +1750,7 @@ type MessageFederationRequestBodyContentsItemMessageContent struct {
 	// Must be non-empty
 	Nonce string `json:"Nonce"`
 
-	// The timestamp when the message content was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
+	// The timestamp when the message content was created. Format => RFC3339. This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
 	//
 	// Required
 	//
@@ -2004,7 +1807,7 @@ type MessageFederationRequestBodyContentsItemMessageContentEncryptionDataItemEnc
 
 type MessageFederationRequestBodyUserSpecificDataItem struct {
 
-	// The timestamp when the recipient reacted to the message. This field is null if the recipient has not reacted to the message yet. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when each reaction was made for the message.
+	// The timestamp when the recipient reacted to the message. This field is null if the recipient has not reacted to the message yet. Format => RFC3339. This field is included to provide context about when each reaction was made for the message.
 	//
 	// Optional
 	//
@@ -2016,7 +1819,7 @@ type MessageFederationRequestBodyUserSpecificDataItem struct {
 	//
 	Reaction *string `json:"Reaction,omitempty"`
 
-	// The timestamp when the recipient read the message. This field is null if the recipient has not read the message yet. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide read receipt functionality, allowing the sender to know when each recipient has read the message.
+	// The timestamp when the recipient read the message. This field is null if the recipient has not read the message yet. Format => RFC3339. This field is included to provide read receipt functionality, allowing the sender to know when each recipient has read the message.
 	//
 	// Optional
 	//
@@ -2060,6 +1863,12 @@ func (req *MessageFederationRequest) Validate() error {
 
 func (o *MessageFederationRequestBody) Validate() error {
 
+	for idx, item := range o.Attachments {
+		if err := item.Validate(); err != nil {
+			return fmt.Errorf("element %d of field 'Attachments' is invalid: %w", idx, err)
+		}
+	}
+
 	if len(o.Contents) == 0 {
 		return fmt.Errorf("field 'Contents' must be non-empty")
 	}
@@ -2094,6 +1903,26 @@ func (o *MessageFederationRequestBody) Validate() error {
 		if err := item.Validate(); err != nil {
 			return fmt.Errorf("element %d of field 'UserSpecificData' is invalid: %w", idx, err)
 		}
+	}
+
+	return nil
+}
+func (o *MessageFederationRequestBodyAttachmentsItem) Validate() error {
+
+	if strings.TrimSpace(o.ContentType) == "" {
+		return fmt.Errorf("field 'ContentType' must be non-empty")
+	}
+
+	if strings.TrimSpace(o.FileHash) == "" {
+		return fmt.Errorf("field 'FileHash' must be non-empty")
+	}
+
+	if strings.TrimSpace(o.FileId) == "" {
+		return fmt.Errorf("field 'FileId' must be non-empty")
+	}
+
+	if strings.TrimSpace(o.Filename) == "" {
+		return fmt.Errorf("field 'Filename' must be non-empty")
 	}
 
 	return nil
@@ -2234,454 +2063,8 @@ func NewMessageFederation500Response(resp *http.Response) (MessageFederation500R
 }
 
 const (
-	MessageForwardFederationRequestHTTPMethod = "POST"
-	MessageForwardFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages/forward"
-)
-
-// \"FEDERATION\" Forward an existing message to a conversation from another server.
-type MessageForwardFederationRequest struct {
-
-	// Source: path parameter "{conversationId}"
-	//
-
-	// Unique identifier of the conversation to forward the message to.
-	//
-	// Required
-	ConversationId string
-
-	// Authentication parameters
-	Auth MessageForwardFederationRequestAuthParams
-
-	// Request body
-	Body MessageForwardFederationRequestBody
-}
-
-type MessageForwardFederationRequestBody struct {
-
-	// Message details.
-	//
-	// Required
-	//
-	OriginalMessageRequest MessageForwardFederationRequestBodyOriginalMessageRequest `json:"OriginalMessageRequest"`
-
-	// User ID of the sender of the forwarded message. This should be in the format localpart@domain and must belong to the requesting server.
-	//
-	// Required
-	//
-	// Must be non-empty
-	SenderUserId string `json:"SenderUserId"`
-}
-
-type MessageForwardFederationRequestBodyOriginalMessageRequest struct {
-
-	// An optional list of attachments to be included with the message. Each attachment can be a file, image, or other media type that is associated with the message. The server will store the attachments and deliver them to the recipients along with the message content.
-	//
-	// Optional
-	//
-	Attachments []string `json:"Attachments,omitempty"`
-
-	// The content of the message to be sent in the conversation. The content should be encrypted using an AES key, and the AES key should be encrypted for each recipient using their respective public keys. The server will store the encrypted message content and the encrypted keys for each recipient, allowing the recipients to decrypt the AES key using their private keys and then use it to decrypt the message content.
-	//
-	// Required
-	//
-	MessageContent MessageForwardFederationRequestBodyOriginalMessageRequestMessageContent `json:"MessageContent"`
-}
-
-type MessageForwardFederationRequestBodyOriginalMessageRequestMessageContent struct {
-
-	// The content of the message to be sent in the conversation. The content should be encrypted using an AES key, and the AES key should be encrypted for each recipient using their respective public keys. The server will store the encrypted message content and the encrypted keys for each recipient, allowing the recipients to decrypt the AES key using their private keys and then use it to decrypt the message content.
-	//
-	// Required
-	//
-	// Must be non-empty
-	Content string `json:"Content"`
-
-	// Encryption details for the recipients of the message.
-	//
-	// Required
-	//
-	// Must be non-empty
-	EncryptionData []MessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItem `json:"EncryptionData"`
-
-	// The nonce (or initialization vector) used in the AES encryption of the message content. This should be a unique value for each message encrypted with the same AES key to ensure security. The nonce is required for the decryption process, as it is used along with the AES key to decrypt the message content. The server will store the nonce along with the encrypted message content and deliver it to the recipients, allowing them to use it in the decryption process. The nonce should be generated securely (e.g., using a cryptographically secure random number generator) and should be of 12 bytes (96 bits) in length for AES-256-GCM encryption.
-	//
-	// Required
-	//
-	// Must be non-empty
-	Nonce string `json:"Nonce"`
-
-	// The timestamp when the message content was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
-	//
-	// Required
-	//
-	// Must be non-empty
-	Timestamp string `json:"Timestamp"`
-}
-
-type MessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItem struct {
-
-	// Encryption details for a recipient of the message.
-	//
-	// Required
-	//
-	Encryption MessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItemEncryption `json:"Encryption"`
-
-	// User ID of the recipient of the message. (localpart@domain). This field is included to associate the encryption details with the specific recipient, allowing the server to deliver the correct encrypted key and nonce to each recipient along with the encrypted message content.
-	//
-	// Required
-	//
-	// Must be non-empty
-	RecipientId string `json:"RecipientId"`
-}
-
-type MessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItemEncryption struct {
-
-	// The AES key used to encrypt the message content, encrypted with the recipient's public key using an asymmetric encryption algorithm (X25519 + HKDF). The server will store this encrypted key and deliver it to the recipient along with the encrypted message content, allowing the recipient to decrypt the AES key using their private key and then use it to decrypt the message content.
-	//
-	// Required
-	//
-	// Must be non-empty
-	EncryptedKey string `json:"EncryptedKey"`
-
-	// The nonce used in the encryption of the AES key for this recipient. This should be a unique value for each encrypted key to ensure security. The server will store this nonce along with the encrypted key and deliver it to the recipient, allowing them to use it in the decryption process. The nonce should be generated securely (e.g., using a cryptographically secure random number generator) and should be of 12 bytes (96 bits) in length for AES-256-GCM encryption.
-	//
-	// Required
-	//
-	// Must be non-empty
-	EncryptedKeyNonce string `json:"EncryptedKeyNonce"`
-
-	// An ephemeral public key generated by the sender for this message, used in the encryption process (X25519).
-	//
-	// Required
-	//
-	// Must be non-empty
-	EphemeralPublicKey string `json:"EphemeralPublicKey"`
-
-	// The unique identifier of the public key that was used to encrypt the message for this recipient. This should correspond to a KeyId returned by the server when the client added their public keys.
-	//
-	// Required
-	//
-	// Must be non-empty
-	KeyId string `json:"KeyId"`
-}
-
-type MessageForwardFederationRequestAuthParams struct {
-
-	// Required Authentication Method
-	// Source: header "Authorization"
-	//
-	// Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint.
-	//
-	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
-	//
-	Authorization *string
-}
-
-func (req *MessageForwardFederationRequest) Validate() error {
-
-	if err := req.Body.Validate(); err != nil {
-		return err
-	}
-	// Authentication parameters validation
-
-	// Validate required auth parameters
-
-	if req.Auth.Authorization == nil {
-		return fmt.Errorf("missing required authentication parameter: Authorization")
-	}
-
-	return nil
-}
-
-func (o *MessageForwardFederationRequestBody) Validate() error {
-
-	if err := o.OriginalMessageRequest.Validate(); err != nil {
-		return fmt.Errorf("field 'OriginalMessageRequest' is invalid: %w", err)
-	}
-
-	if strings.TrimSpace(o.SenderUserId) == "" {
-		return fmt.Errorf("field 'SenderUserId' must be non-empty")
-	}
-
-	return nil
-}
-func (o *MessageForwardFederationRequestBodyOriginalMessageRequest) Validate() error {
-
-	if err := o.MessageContent.Validate(); err != nil {
-		return fmt.Errorf("field 'MessageContent' is invalid: %w", err)
-	}
-
-	return nil
-}
-func (o *MessageForwardFederationRequestBodyOriginalMessageRequestMessageContent) Validate() error {
-
-	if strings.TrimSpace(o.Content) == "" {
-		return fmt.Errorf("field 'Content' must be non-empty")
-	}
-
-	if len(o.EncryptionData) == 0 {
-		return fmt.Errorf("field 'EncryptionData' must be non-empty")
-	}
-
-	for idx, item := range o.EncryptionData {
-		if err := item.Validate(); err != nil {
-			return fmt.Errorf("element %d of field 'EncryptionData' is invalid: %w", idx, err)
-		}
-	}
-
-	if strings.TrimSpace(o.Nonce) == "" {
-		return fmt.Errorf("field 'Nonce' must be non-empty")
-	}
-
-	if strings.TrimSpace(o.Timestamp) == "" {
-		return fmt.Errorf("field 'Timestamp' must be non-empty")
-	}
-
-	return nil
-}
-func (o *MessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItem) Validate() error {
-
-	if err := o.Encryption.Validate(); err != nil {
-		return fmt.Errorf("field 'Encryption' is invalid: %w", err)
-	}
-
-	if strings.TrimSpace(o.RecipientId) == "" {
-		return fmt.Errorf("field 'RecipientId' must be non-empty")
-	}
-
-	return nil
-}
-func (o *MessageForwardFederationRequestBodyOriginalMessageRequestMessageContentEncryptionDataItemEncryption) Validate() error {
-
-	if strings.TrimSpace(o.EncryptedKey) == "" {
-		return fmt.Errorf("field 'EncryptedKey' must be non-empty")
-	}
-
-	if strings.TrimSpace(o.EncryptedKeyNonce) == "" {
-		return fmt.Errorf("field 'EncryptedKeyNonce' must be non-empty")
-	}
-
-	if strings.TrimSpace(o.EphemeralPublicKey) == "" {
-		return fmt.Errorf("field 'EphemeralPublicKey' must be non-empty")
-	}
-
-	if strings.TrimSpace(o.KeyId) == "" {
-		return fmt.Errorf("field 'KeyId' must be non-empty")
-	}
-
-	return nil
-}
-
-type MessageForwardFederation200Response struct {
-}
-
-func NewMessageForwardFederation200Response(resp *http.Response) (MessageForwardFederation200Response, error) {
-	defer resp.Body.Close()
-	result := MessageForwardFederation200Response{}
-
-	return result, nil
-}
-
-type MessageForwardFederation400Response struct {
-}
-
-func NewMessageForwardFederation400Response(resp *http.Response) (MessageForwardFederation400Response, error) {
-	defer resp.Body.Close()
-	result := MessageForwardFederation400Response{}
-
-	return result, nil
-}
-
-type MessageForwardFederation401Response struct {
-}
-
-func NewMessageForwardFederation401Response(resp *http.Response) (MessageForwardFederation401Response, error) {
-	defer resp.Body.Close()
-	result := MessageForwardFederation401Response{}
-
-	return result, nil
-}
-
-type MessageForwardFederation403Response struct {
-}
-
-func NewMessageForwardFederation403Response(resp *http.Response) (MessageForwardFederation403Response, error) {
-	defer resp.Body.Close()
-	result := MessageForwardFederation403Response{}
-
-	return result, nil
-}
-
-type MessageForwardFederation404Response struct {
-}
-
-func NewMessageForwardFederation404Response(resp *http.Response) (MessageForwardFederation404Response, error) {
-	defer resp.Body.Close()
-	result := MessageForwardFederation404Response{}
-
-	return result, nil
-}
-
-type MessageForwardFederation500Response struct {
-}
-
-func NewMessageForwardFederation500Response(resp *http.Response) (MessageForwardFederation500Response, error) {
-	defer resp.Body.Close()
-	result := MessageForwardFederation500Response{}
-
-	return result, nil
-}
-
-const (
-	NewAttachmentRequestHTTPMethod = "POST"
-	NewAttachmentRequestRoutePath  = "/api/client/attachments"
-)
-
-// Upload an attachment to be included with a message.
-type NewAttachmentRequest struct {
-
-	// Authentication parameters
-	Auth NewAttachmentRequestAuthParams
-
-	// Request body
-	Body NewAttachmentRequestBody
-}
-
-type NewAttachmentRequestBody struct {
-
-	// The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
-	//
-	// Required
-	//
-	// Must be non-empty
-	ContentType string `json:"ContentType"`
-
-	// The original filename of the attachment.
-	//
-	// Required
-	//
-	// Must be non-empty
-	Filename string `json:"Filename"`
-
-	// The size of the attachment in bytes. The server may enforce a maximum attachment size.
-	//
-	// Required
-	//
-	Size float64 `json:"Size"`
-}
-
-type NewAttachmentRequestAuthParams struct {
-
-	// Required Authentication Method
-	// Source: header "Authorization"
-	//
-	// A token used to authenticate the client session. This token is obtained after a successful login and must be included in the header of subsequent requests to access protected resources.
-	//
-	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
-	//
-	Authorization *string
-}
-
-func (req *NewAttachmentRequest) Validate() error {
-
-	if err := req.Body.Validate(); err != nil {
-		return err
-	}
-	// Authentication parameters validation
-
-	// Validate required auth parameters
-
-	if req.Auth.Authorization == nil {
-		return fmt.Errorf("missing required authentication parameter: Authorization")
-	}
-
-	return nil
-}
-
-func (o *NewAttachmentRequestBody) Validate() error {
-
-	if strings.TrimSpace(o.ContentType) == "" {
-		return fmt.Errorf("field 'ContentType' must be non-empty")
-	}
-
-	if strings.TrimSpace(o.Filename) == "" {
-		return fmt.Errorf("field 'Filename' must be non-empty")
-	}
-
-	return nil
-}
-
-type NewAttachment201Response struct {
-
-	// Response body
-	Body NewAttachment201ResponseBody
-}
-
-type NewAttachment201ResponseBody struct {
-
-	// A unique identifier for the attachment, typically a UUIDv7. This ID can be used to reference the attachment in future operations, such as including it in a message payload when sending a message with attachments. The server will store the attachment and deliver it to the recipients along with the message content.
-	//
-	// Required
-	//
-	// Must be non-empty
-	AttachmentId string `json:"AttachmentId"`
-}
-
-func NewNewAttachment201Response(resp *http.Response) (NewAttachment201Response, error) {
-	defer resp.Body.Close()
-	result := NewAttachment201Response{}
-
-	decoder := json.NewDecoder(resp.Body)
-	if err := decoder.Decode(&result.Body); err != nil {
-		return result, err
-	}
-
-	return result, nil
-}
-
-type NewAttachment400Response struct {
-}
-
-func NewNewAttachment400Response(resp *http.Response) (NewAttachment400Response, error) {
-	defer resp.Body.Close()
-	result := NewAttachment400Response{}
-
-	return result, nil
-}
-
-type NewAttachment401Response struct {
-}
-
-func NewNewAttachment401Response(resp *http.Response) (NewAttachment401Response, error) {
-	defer resp.Body.Close()
-	result := NewAttachment401Response{}
-
-	return result, nil
-}
-
-type NewAttachment413Response struct {
-}
-
-func NewNewAttachment413Response(resp *http.Response) (NewAttachment413Response, error) {
-	defer resp.Body.Close()
-	result := NewAttachment413Response{}
-
-	return result, nil
-}
-
-type NewAttachment500Response struct {
-}
-
-func NewNewAttachment500Response(resp *http.Response) (NewAttachment500Response, error) {
-	defer resp.Body.Close()
-	result := NewAttachment500Response{}
-
-	return result, nil
-}
-
-const (
 	NewConversationRequestHTTPMethod = "POST"
-	NewConversationRequestRoutePath  = "/api/client/conversations"
+	NewConversationRequestRoutePath  = "/iimp/api/client/conversations"
 )
 
 // Create a new conversation.
@@ -2755,21 +2138,14 @@ type NewConversation201Response struct {
 
 type NewConversation201ResponseBodyConversationParticipantsItem struct {
 
-	// The unique identifier of the conversation that the participant is part of. This is typically a UUIDv7.
-	//
-	// Required
-	//
-	// Must be non-empty
-	ConversationId string `json:"ConversationId"`
-
-	// The timestamp when the participant joined the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+	// The timestamp when the participant joined the conversation. Format => RFC3339.
 	//
 	// Required
 	//
 	// Must be non-empty
 	JoinedAt string `json:"JoinedAt"`
 
-	// The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
+	// The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => RFC3339. A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
 	//
 	// Optional
 	//
@@ -2792,7 +2168,7 @@ type NewConversation201ResponseBodyConversationParticipantsItem struct {
 
 type NewConversation201ResponseBodyConversation struct {
 
-	// A unique identifier for the conversation, typically a UUIDv7.
+	// A unique identifier for the conversation.
 	//
 	// Required
 	//
@@ -2812,12 +2188,18 @@ type NewConversation201ResponseBodyConversation struct {
 	// Must be non-empty
 	ConversationOwnerId string `json:"ConversationOwnerId"`
 
-	// The timestamp when the conversation was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+	// The timestamp when the conversation was created. Format => RFC3339.
 	//
 	// Required
 	//
 	// Must be non-empty
 	CreatedAt string `json:"CreatedAt"`
+
+	// A flag indicating whether the conversation is a Direct Message (DM) or a Group Conversation. A Direct Message conversation has exactly 2 participants (including the owner), while a Group Conversation has more than 2 participants.
+	//
+	// Required
+	//
+	IsDM bool `json:"IsDM"`
 
 	// A list of participants in the conversation. The owner of the conversation is also included in this list. Participants can be added or removed by the owner user. Contains at least 2 participants (including the owner) for a Direct Conversation and >2 participants for a Group Conversation.
 	//
@@ -2831,9 +2213,9 @@ type NewConversation201ResponseBody struct {
 
 	// Details of the created conversation.
 	//
-	// Optional
+	// Required
 	//
-	Conversation *NewConversation201ResponseBodyConversation `json:"Conversation,omitempty"`
+	Conversation NewConversation201ResponseBodyConversation `json:"Conversation"`
 }
 
 func NewNewConversation201Response(resp *http.Response) (NewConversation201Response, error) {
@@ -2900,7 +2282,7 @@ func NewNewConversation500Response(resp *http.Response) (NewConversation500Respo
 
 const (
 	NewMessageRequestHTTPMethod = "POST"
-	NewMessageRequestRoutePath  = "/api/client/conversations/{conversationId}/messages"
+	NewMessageRequestRoutePath  = "/iimp/api/client/conversations/{conversationId}/messages"
 )
 
 // Send a new message in a conversation.
@@ -2909,7 +2291,7 @@ type NewMessageRequest struct {
 	// Source: path parameter "{conversationId}"
 	//
 
-	// The unique identifier of the conversation to send the message in. This is typically a UUIDv7.
+	// The unique identifier of the conversation to send the message in.
 	//
 	// Required
 	ConversationId string
@@ -2927,13 +2309,50 @@ type NewMessageRequestBody struct {
 	//
 	// Optional
 	//
-	Attachments []string `json:"Attachments,omitempty"`
+	Attachments []NewMessageRequestBodyAttachmentsItem `json:"Attachments,omitempty"`
 
 	// The content of the message to be sent in the conversation. The content should be encrypted using an AES key, and the AES key should be encrypted for each recipient using their respective public keys. The server will store the encrypted message content and the encrypted keys for each recipient, allowing the recipients to decrypt the AES key using their private keys and then use it to decrypt the message content.
 	//
 	// Required
 	//
 	MessageContent NewMessageRequestBodyMessageContent `json:"MessageContent"`
+}
+
+type NewMessageRequestBodyAttachmentsItem struct {
+
+	// The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
+	//
+	// Required
+	//
+	// Must be non-empty
+	ContentType string `json:"ContentType"`
+
+	// A hash of the attachment file content (SHA-256 hash) used for integrity verification. The server can use this hash to verify that the attachment file has not been tampered with during storage or transmission.
+	//
+	// Required
+	//
+	// Must be non-empty
+	FileHash string `json:"FileHash"`
+
+	// A unique identifier for the attachment. Sender's server generates this ID when the attachment is uploaded and returns it to the sender client, which then includes it in the message payload when sending a message with attachments. The server will store the attachment and deliver it to the recipients along with the message content.
+	//
+	// Required
+	//
+	// Must be non-empty
+	FileId string `json:"FileId"`
+
+	// The original filename of the attachment.
+	//
+	// Required
+	//
+	// Must be non-empty
+	Filename string `json:"Filename"`
+
+	// The size of the attachment in bytes. The server may enforce a maximum attachment size (1000MB) and reject attachments that exceed this limit.
+	//
+	// Required
+	//
+	Size float64 `json:"Size"`
 }
 
 type NewMessageRequestBodyMessageContent struct {
@@ -2945,7 +2364,7 @@ type NewMessageRequestBodyMessageContent struct {
 	// Must be non-empty
 	Content string `json:"Content"`
 
-	// Encryption details for the recipients of the message.
+	// Encryption details for the recipients of the message. The sender client should not include details for participants of a convo where RemovedAt != nil.
 	//
 	// Required
 	//
@@ -2959,7 +2378,7 @@ type NewMessageRequestBodyMessageContent struct {
 	// Must be non-empty
 	Nonce string `json:"Nonce"`
 
-	// The timestamp when the message content was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
+	// The timestamp when the message content was created. Format => RFC3339. This field is included to provide context about when the message content was created, which can be useful for ordering messages and displaying timestamps in the client applications.
 	//
 	// Required
 	//
@@ -3044,8 +2463,34 @@ func (req *NewMessageRequest) Validate() error {
 
 func (o *NewMessageRequestBody) Validate() error {
 
+	for idx, item := range o.Attachments {
+		if err := item.Validate(); err != nil {
+			return fmt.Errorf("element %d of field 'Attachments' is invalid: %w", idx, err)
+		}
+	}
+
 	if err := o.MessageContent.Validate(); err != nil {
 		return fmt.Errorf("field 'MessageContent' is invalid: %w", err)
+	}
+
+	return nil
+}
+func (o *NewMessageRequestBodyAttachmentsItem) Validate() error {
+
+	if strings.TrimSpace(o.ContentType) == "" {
+		return fmt.Errorf("field 'ContentType' must be non-empty")
+	}
+
+	if strings.TrimSpace(o.FileHash) == "" {
+		return fmt.Errorf("field 'FileHash' must be non-empty")
+	}
+
+	if strings.TrimSpace(o.FileId) == "" {
+		return fmt.Errorf("field 'FileId' must be non-empty")
+	}
+
+	if strings.TrimSpace(o.Filename) == "" {
+		return fmt.Errorf("field 'Filename' must be non-empty")
 	}
 
 	return nil
@@ -3110,29 +2555,11 @@ func (o *NewMessageRequestBodyMessageContentEncryptionDataItemEncryption) Valida
 }
 
 type NewMessage201Response struct {
-
-	// Response body
-	Body NewMessage201ResponseBody
-}
-
-type NewMessage201ResponseBody struct {
-
-	// A unique identifier for the message, typically a UUIDv7.
-	//
-	// Required
-	//
-	// Must be non-empty
-	MessageId string `json:"MessageId"`
 }
 
 func NewNewMessage201Response(resp *http.Response) (NewMessage201Response, error) {
 	defer resp.Body.Close()
 	result := NewMessage201Response{}
-
-	decoder := json.NewDecoder(resp.Body)
-	if err := decoder.Decode(&result.Body); err != nil {
-		return result, err
-	}
 
 	return result, nil
 }
@@ -3188,8 +2615,160 @@ func NewNewMessage500Response(resp *http.Response) (NewMessage500Response, error
 }
 
 const (
+	PullUserEventsRequestHTTPMethod = "GET"
+	PullUserEventsRequestRoutePath  = "/iimp/api/client/events"
+)
+
+// Fetch a list of events for the authenticated user.
+type PullUserEventsRequest struct {
+
+	// Source: query parameter "cursor"
+	//
+
+	// A cursor (for this use case, MongoDB's ObjectID) for pagination. The server will return events starting from this cursor. If not provided, the server will return all available events starting from the oldest event in the system. The response will include a next_cursor field that can be used to fetch the next page of results.
+	//
+	// Optional
+	Cursor *string
+
+	// Source: query parameter "limit"
+	//
+
+	// The maximum number of events to return in the response. If not provided, the server will use a default limit (50). The server may enforce a maximum limit (100) to prevent excessively large responses.
+	//
+	// Optional
+	Limit *float64
+
+	// Authentication parameters
+	Auth PullUserEventsRequestAuthParams
+}
+
+type PullUserEventsRequestAuthParams struct {
+
+	// Required Authentication Method
+	// Source: header "Authorization"
+	//
+	// A token used to authenticate the client session. This token is obtained after a successful login and must be included in the header of subsequent requests to access protected resources.
+	//
+	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
+	//
+	Authorization *string
+}
+
+func (req *PullUserEventsRequest) Validate() error {
+
+	// Authentication parameters validation
+
+	// Validate required auth parameters
+
+	if req.Auth.Authorization == nil {
+		return fmt.Errorf("missing required authentication parameter: Authorization")
+	}
+
+	return nil
+}
+
+type PullUserEvents200Response struct {
+
+	// Response body
+	Body PullUserEvents200ResponseBody
+}
+
+type PullUserEvents200ResponseBodyEventsItem struct {
+
+	// The timestamp when the event was created. Format => RFC3339.
+	//
+	// Required
+	//
+	// Must be non-empty
+	CreatedAt string `json:"CreatedAt"`
+
+	// A unique identifier for the event (Monotonically increasing per-user sequence number).
+	//
+	// Required
+	//
+	EventId string `json:"EventId"`
+
+	// The type of the event (e.g., "message_received", "conversation_created", etc.). This field can be used by the client to determine how to process the event. For a full list of event types and their corresponding payload structures, refer to the IIMP Client Events documentation [here](https://github.com/iim-protocol/iimp/tree/main/Events.md).
+	//
+	// Required
+	//
+	// Must be non-empty
+	EventType string `json:"EventType"`
+
+	// An optional field containing additional data related to the event. The structure of this object can vary depending on the event type and must conform to the IIMP Client Events documentation. Clients should be designed to handle different payload structures based on the event type.
+	//
+	// Optional
+	//
+	Payload *map[string]any `json:"Payload,omitempty"`
+
+	// User ID of the user to whom the event belongs. (localpart@domain)
+	//
+	// Required
+	//
+	// Must be non-empty
+	UserId string `json:"UserId"`
+}
+
+type PullUserEvents200ResponseBody struct {
+
+	// A list of events for the authenticated user, if any available. The events are ordered by their EventId in Ascending Order. The server may return up to 'limit' events in the response. If there are more events available beyond the returned list, a 'next_cursor' field will be included in the response, which can be used to fetch the next page of results.
+	//
+	// Required
+	//
+	Events []PullUserEvents200ResponseBodyEventsItem `json:"Events"`
+
+	// A cursor for the next page of results, if available. This field will be included in the response if there are more events available beyond the returned list.
+	//
+	// Optional
+	//
+	NextCursor *string `json:"NextCursor,omitempty"`
+}
+
+func NewPullUserEvents200Response(resp *http.Response) (PullUserEvents200Response, error) {
+	defer resp.Body.Close()
+	result := PullUserEvents200Response{}
+
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(&result.Body); err != nil {
+		return result, err
+	}
+
+	return result, nil
+}
+
+type PullUserEvents400Response struct {
+}
+
+func NewPullUserEvents400Response(resp *http.Response) (PullUserEvents400Response, error) {
+	defer resp.Body.Close()
+	result := PullUserEvents400Response{}
+
+	return result, nil
+}
+
+type PullUserEvents401Response struct {
+}
+
+func NewPullUserEvents401Response(resp *http.Response) (PullUserEvents401Response, error) {
+	defer resp.Body.Close()
+	result := PullUserEvents401Response{}
+
+	return result, nil
+}
+
+type PullUserEvents500Response struct {
+}
+
+func NewPullUserEvents500Response(resp *http.Response) (PullUserEvents500Response, error) {
+	defer resp.Body.Close()
+	result := PullUserEvents500Response{}
+
+	return result, nil
+}
+
+const (
 	ReactToMessageRequestHTTPMethod = "POST"
-	ReactToMessageRequestRoutePath  = "/api/client/conversations/{conversationId}/messages/{messageId}/react"
+	ReactToMessageRequestRoutePath  = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/react"
 )
 
 // React to a message in a conversation.
@@ -3198,7 +2777,7 @@ type ReactToMessageRequest struct {
 	// Source: path parameter "{conversationId}"
 	//
 
-	// The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+	// The unique identifier of the conversation that the message belongs to.
 	//
 	// Required
 	ConversationId string
@@ -3206,7 +2785,7 @@ type ReactToMessageRequest struct {
 	// Source: path parameter "{messageId}"
 	//
 
-	// The unique identifier of the message to react to. This is typically a UUIDv7.
+	// The unique identifier of the message to react to.
 	//
 	// Required
 	MessageId string
@@ -3321,171 +2900,8 @@ func NewReactToMessage500Response(resp *http.Response) (ReactToMessage500Respons
 }
 
 const (
-	ReactToMessageForwardFederationRequestHTTPMethod = "POST"
-	ReactToMessageForwardFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages/{messageId}/react/forward"
-)
-
-// \"FEDERATION\" React to a message in a conversation on another server.
-type ReactToMessageForwardFederationRequest struct {
-
-	// Source: path parameter "{conversationId}"
-	//
-
-	// Unique identifier of the conversation to react to the message in.
-	//
-	// Required
-	ConversationId string
-
-	// Source: path parameter "{messageId}"
-	//
-
-	// Unique identifier of the message to react to.
-	//
-	// Required
-	MessageId string
-
-	// Authentication parameters
-	Auth ReactToMessageForwardFederationRequestAuthParams
-
-	// Request body
-	Body ReactToMessageForwardFederationRequestBody
-}
-
-type ReactToMessageForwardFederationRequestBody struct {
-
-	// Original received reaction on the requesting server.
-	//
-	// Optional
-	//
-	OriginalReaction *ReactToMessageForwardFederationRequestBodyOriginalReaction `json:"OriginalReaction,omitempty"`
-
-	// User ID of the user who made the reaction. This should be in the format localpart@domain and must belong to the requesting server.
-	//
-	// Required
-	//
-	// Must be non-empty
-	ReactingUserId string `json:"ReactingUserId"`
-}
-
-type ReactToMessageForwardFederationRequestBodyOriginalReaction struct {
-
-	// A reaction from the recipient of a message (e.g., "like", "love", "laugh", "sad", "angry", etc.). Emoji-Only field. Null to remove reaction.
-	//
-	// Optional
-	//
-	Reaction *string `json:"Reaction,omitempty"`
-}
-
-type ReactToMessageForwardFederationRequestAuthParams struct {
-
-	// Required Authentication Method
-	// Source: header "Authorization"
-	//
-	// Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint.
-	//
-	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
-	//
-	Authorization *string
-}
-
-func (req *ReactToMessageForwardFederationRequest) Validate() error {
-
-	if err := req.Body.Validate(); err != nil {
-		return err
-	}
-	// Authentication parameters validation
-
-	// Validate required auth parameters
-
-	if req.Auth.Authorization == nil {
-		return fmt.Errorf("missing required authentication parameter: Authorization")
-	}
-
-	return nil
-}
-
-func (o *ReactToMessageForwardFederationRequestBody) Validate() error {
-
-	if o.OriginalReaction != nil {
-		if err := o.OriginalReaction.Validate(); err != nil {
-			return fmt.Errorf("field 'OriginalReaction' is invalid: %w", err)
-		}
-	}
-
-	if strings.TrimSpace(o.ReactingUserId) == "" {
-		return fmt.Errorf("field 'ReactingUserId' must be non-empty")
-	}
-
-	return nil
-}
-func (o *ReactToMessageForwardFederationRequestBodyOriginalReaction) Validate() error {
-
-	return nil
-}
-
-type ReactToMessageForwardFederation200Response struct {
-}
-
-func NewReactToMessageForwardFederation200Response(resp *http.Response) (ReactToMessageForwardFederation200Response, error) {
-	defer resp.Body.Close()
-	result := ReactToMessageForwardFederation200Response{}
-
-	return result, nil
-}
-
-type ReactToMessageForwardFederation400Response struct {
-}
-
-func NewReactToMessageForwardFederation400Response(resp *http.Response) (ReactToMessageForwardFederation400Response, error) {
-	defer resp.Body.Close()
-	result := ReactToMessageForwardFederation400Response{}
-
-	return result, nil
-}
-
-type ReactToMessageForwardFederation401Response struct {
-}
-
-func NewReactToMessageForwardFederation401Response(resp *http.Response) (ReactToMessageForwardFederation401Response, error) {
-	defer resp.Body.Close()
-	result := ReactToMessageForwardFederation401Response{}
-
-	return result, nil
-}
-
-type ReactToMessageForwardFederation403Response struct {
-}
-
-func NewReactToMessageForwardFederation403Response(resp *http.Response) (ReactToMessageForwardFederation403Response, error) {
-	defer resp.Body.Close()
-	result := ReactToMessageForwardFederation403Response{}
-
-	return result, nil
-}
-
-type ReactToMessageForwardFederation404Response struct {
-}
-
-func NewReactToMessageForwardFederation404Response(resp *http.Response) (ReactToMessageForwardFederation404Response, error) {
-	defer resp.Body.Close()
-	result := ReactToMessageForwardFederation404Response{}
-
-	return result, nil
-}
-
-type ReactToMessageForwardFederation500Response struct {
-}
-
-func NewReactToMessageForwardFederation500Response(resp *http.Response) (ReactToMessageForwardFederation500Response, error) {
-	defer resp.Body.Close()
-	result := ReactToMessageForwardFederation500Response{}
-
-	return result, nil
-}
-
-const (
 	ReadMessageRequestHTTPMethod = "POST"
-	ReadMessageRequestRoutePath  = "/api/client/conversations/{conversationId}/messages/{messageId}/read"
+	ReadMessageRequestRoutePath  = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/read"
 )
 
 // Mark a message as read by the authenticated user.
@@ -3494,7 +2910,7 @@ type ReadMessageRequest struct {
 	// Source: path parameter "{conversationId}"
 	//
 
-	// The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+	// The unique identifier of the conversation that the message belongs to.
 	//
 	// Required
 	ConversationId string
@@ -3502,7 +2918,7 @@ type ReadMessageRequest struct {
 	// Source: path parameter "{messageId}"
 	//
 
-	// The unique identifier of the message to mark as read. This is typically a UUIDv7.
+	// The unique identifier of the message to mark as read.
 	//
 	// Required
 	MessageId string
@@ -3597,146 +3013,8 @@ func NewReadMessage500Response(resp *http.Response) (ReadMessage500Response, err
 }
 
 const (
-	ReadMessageForwardFederationRequestHTTPMethod = "POST"
-	ReadMessageForwardFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages/{messageId}/read/forward"
-)
-
-// \"FEDERATION\" Mark a message as read in a conversation on another server.
-type ReadMessageForwardFederationRequest struct {
-
-	// Source: path parameter "{conversationId}"
-	//
-
-	// Unique identifier of the conversation to mark the message as read in.
-	//
-	// Required
-	ConversationId string
-
-	// Source: path parameter "{messageId}"
-	//
-
-	// Unique identifier of the message to mark as read.
-	//
-	// Required
-	MessageId string
-
-	// Authentication parameters
-	Auth ReadMessageForwardFederationRequestAuthParams
-
-	// Request body
-	Body ReadMessageForwardFederationRequestBody
-}
-
-type ReadMessageForwardFederationRequestBody struct {
-
-	// User ID of the user who read the message. This should be in the format localpart@domain and must belong to the requesting server.
-	//
-	// Required
-	//
-	// Must be non-empty
-	ReaderUserId string `json:"ReaderUserId"`
-}
-
-type ReadMessageForwardFederationRequestAuthParams struct {
-
-	// Required Authentication Method
-	// Source: header "Authorization"
-	//
-	// Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint.
-	//
-	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
-	//
-	Authorization *string
-}
-
-func (req *ReadMessageForwardFederationRequest) Validate() error {
-
-	if err := req.Body.Validate(); err != nil {
-		return err
-	}
-	// Authentication parameters validation
-
-	// Validate required auth parameters
-
-	if req.Auth.Authorization == nil {
-		return fmt.Errorf("missing required authentication parameter: Authorization")
-	}
-
-	return nil
-}
-
-func (o *ReadMessageForwardFederationRequestBody) Validate() error {
-
-	if strings.TrimSpace(o.ReaderUserId) == "" {
-		return fmt.Errorf("field 'ReaderUserId' must be non-empty")
-	}
-
-	return nil
-}
-
-type ReadMessageForwardFederation200Response struct {
-}
-
-func NewReadMessageForwardFederation200Response(resp *http.Response) (ReadMessageForwardFederation200Response, error) {
-	defer resp.Body.Close()
-	result := ReadMessageForwardFederation200Response{}
-
-	return result, nil
-}
-
-type ReadMessageForwardFederation400Response struct {
-}
-
-func NewReadMessageForwardFederation400Response(resp *http.Response) (ReadMessageForwardFederation400Response, error) {
-	defer resp.Body.Close()
-	result := ReadMessageForwardFederation400Response{}
-
-	return result, nil
-}
-
-type ReadMessageForwardFederation401Response struct {
-}
-
-func NewReadMessageForwardFederation401Response(resp *http.Response) (ReadMessageForwardFederation401Response, error) {
-	defer resp.Body.Close()
-	result := ReadMessageForwardFederation401Response{}
-
-	return result, nil
-}
-
-type ReadMessageForwardFederation403Response struct {
-}
-
-func NewReadMessageForwardFederation403Response(resp *http.Response) (ReadMessageForwardFederation403Response, error) {
-	defer resp.Body.Close()
-	result := ReadMessageForwardFederation403Response{}
-
-	return result, nil
-}
-
-type ReadMessageForwardFederation404Response struct {
-}
-
-func NewReadMessageForwardFederation404Response(resp *http.Response) (ReadMessageForwardFederation404Response, error) {
-	defer resp.Body.Close()
-	result := ReadMessageForwardFederation404Response{}
-
-	return result, nil
-}
-
-type ReadMessageForwardFederation500Response struct {
-}
-
-func NewReadMessageForwardFederation500Response(resp *http.Response) (ReadMessageForwardFederation500Response, error) {
-	defer resp.Body.Close()
-	result := ReadMessageForwardFederation500Response{}
-
-	return result, nil
-}
-
-const (
 	RedactMessageRequestHTTPMethod = "POST"
-	RedactMessageRequestRoutePath  = "/api/client/conversations/{conversationId}/messages/{messageId}/redact"
+	RedactMessageRequestRoutePath  = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}/redact"
 )
 
 // Redact a message in a conversation. If this conversation is a Direct Conversation, only the sender of the message can redact it. If this conversation is a Group Conversation, only the sender of the message or the owner of the conversation can redact it.
@@ -3745,7 +3023,7 @@ type RedactMessageRequest struct {
 	// Source: path parameter "{conversationId}"
 	//
 
-	// The unique identifier of the conversation that the message belongs to. This is typically a UUIDv7.
+	// The unique identifier of the conversation that the message belongs to.
 	//
 	// Required
 	ConversationId string
@@ -3753,7 +3031,7 @@ type RedactMessageRequest struct {
 	// Source: path parameter "{messageId}"
 	//
 
-	// The unique identifier of the message to redact. This is typically a UUIDv7.
+	// The unique identifier of the message to redact.
 	//
 	// Required
 	MessageId string
@@ -3848,146 +3126,8 @@ func NewRedactMessage500Response(resp *http.Response) (RedactMessage500Response,
 }
 
 const (
-	RedactMessageForwardFederationRequestHTTPMethod = "POST"
-	RedactMessageForwardFederationRequestRoutePath  = "/api/federation/conversations/{conversationId}/messages/{messageId}/redact/forward"
-)
-
-// \"FEDERATION\" Redact a message in a conversation on another server.
-type RedactMessageForwardFederationRequest struct {
-
-	// Source: path parameter "{conversationId}"
-	//
-
-	// Unique identifier of the conversation to redact the message in.
-	//
-	// Required
-	ConversationId string
-
-	// Source: path parameter "{messageId}"
-	//
-
-	// Unique identifier of the message to redact.
-	//
-	// Required
-	MessageId string
-
-	// Authentication parameters
-	Auth RedactMessageForwardFederationRequestAuthParams
-
-	// Request body
-	Body RedactMessageForwardFederationRequestBody
-}
-
-type RedactMessageForwardFederationRequestBody struct {
-
-	// User ID of the sender of the message to redact. This should be in the format localpart@domain and must belong to the requesting server and should be equal to the sender's id on the receiving server's message.
-	//
-	// Required
-	//
-	// Must be non-empty
-	SenderUserId string `json:"SenderUserId"`
-}
-
-type RedactMessageForwardFederationRequestAuthParams struct {
-
-	// Required Authentication Method
-	// Source: header "Authorization"
-	//
-	// Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint.
-	//
-	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
-	//
-	Authorization *string
-}
-
-func (req *RedactMessageForwardFederationRequest) Validate() error {
-
-	if err := req.Body.Validate(); err != nil {
-		return err
-	}
-	// Authentication parameters validation
-
-	// Validate required auth parameters
-
-	if req.Auth.Authorization == nil {
-		return fmt.Errorf("missing required authentication parameter: Authorization")
-	}
-
-	return nil
-}
-
-func (o *RedactMessageForwardFederationRequestBody) Validate() error {
-
-	if strings.TrimSpace(o.SenderUserId) == "" {
-		return fmt.Errorf("field 'SenderUserId' must be non-empty")
-	}
-
-	return nil
-}
-
-type RedactMessageForwardFederation200Response struct {
-}
-
-func NewRedactMessageForwardFederation200Response(resp *http.Response) (RedactMessageForwardFederation200Response, error) {
-	defer resp.Body.Close()
-	result := RedactMessageForwardFederation200Response{}
-
-	return result, nil
-}
-
-type RedactMessageForwardFederation400Response struct {
-}
-
-func NewRedactMessageForwardFederation400Response(resp *http.Response) (RedactMessageForwardFederation400Response, error) {
-	defer resp.Body.Close()
-	result := RedactMessageForwardFederation400Response{}
-
-	return result, nil
-}
-
-type RedactMessageForwardFederation401Response struct {
-}
-
-func NewRedactMessageForwardFederation401Response(resp *http.Response) (RedactMessageForwardFederation401Response, error) {
-	defer resp.Body.Close()
-	result := RedactMessageForwardFederation401Response{}
-
-	return result, nil
-}
-
-type RedactMessageForwardFederation403Response struct {
-}
-
-func NewRedactMessageForwardFederation403Response(resp *http.Response) (RedactMessageForwardFederation403Response, error) {
-	defer resp.Body.Close()
-	result := RedactMessageForwardFederation403Response{}
-
-	return result, nil
-}
-
-type RedactMessageForwardFederation404Response struct {
-}
-
-func NewRedactMessageForwardFederation404Response(resp *http.Response) (RedactMessageForwardFederation404Response, error) {
-	defer resp.Body.Close()
-	result := RedactMessageForwardFederation404Response{}
-
-	return result, nil
-}
-
-type RedactMessageForwardFederation500Response struct {
-}
-
-func NewRedactMessageForwardFederation500Response(resp *http.Response) (RedactMessageForwardFederation500Response, error) {
-	defer resp.Body.Close()
-	result := RedactMessageForwardFederation500Response{}
-
-	return result, nil
-}
-
-const (
 	RefreshSessionRequestHTTPMethod = "POST"
-	RefreshSessionRequestRoutePath  = "/api/client/refresh-session"
+	RefreshSessionRequestRoutePath  = "/iimp/api/client/refresh-session"
 )
 
 // Refresh the session token.
@@ -4027,11 +3167,58 @@ func (o *RefreshSessionRequestBody) Validate() error {
 }
 
 type RefreshSession200Response struct {
+
+	// Response body
+	Body RefreshSession200ResponseBody
+}
+
+type RefreshSession200ResponseBody struct {
+
+	// A new token used to refresh the session token when it expires. Previous refresh tokens are invalidated when a new refresh token is issued.
+	//
+	// Required
+	//
+	// Must be non-empty
+	RefreshToken string `json:"RefreshToken"`
+
+	// The timestamp of when the refresh token expires. Format => RFC3339
+	//
+	// Required
+	//
+	RefreshTokenExpiry string `json:"RefreshTokenExpiry"`
+
+	// A new token used to authenticate the client session. This token must be included in the header of subsequent requests to access protected resources.
+	//
+	// Required
+	//
+	// Must be non-empty
+	SessionToken string `json:"SessionToken"`
+
+	// The timestamp of when the session token expires. Format => RFC3339
+	//
+	// Required
+	//
+	SessionTokenExpiry string `json:"SessionTokenExpiry"`
 }
 
 func NewRefreshSession200Response(resp *http.Response) (RefreshSession200Response, error) {
 	defer resp.Body.Close()
 	result := RefreshSession200Response{}
+
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(&result.Body); err != nil {
+		return result, err
+	}
+
+	return result, nil
+}
+
+type RefreshSession400Response struct {
+}
+
+func NewRefreshSession400Response(resp *http.Response) (RefreshSession400Response, error) {
+	defer resp.Body.Close()
+	result := RefreshSession400Response{}
 
 	return result, nil
 }
@@ -4058,7 +3245,7 @@ func NewRefreshSession500Response(resp *http.Response) (RefreshSession500Respons
 
 const (
 	RequestResetPasswordRequestHTTPMethod = "POST"
-	RequestResetPasswordRequestRoutePath  = "/api/client/request-reset-password"
+	RequestResetPasswordRequestRoutePath  = "/iimp/api/client/request-reset-password"
 )
 
 // Request a password reset for the user account.
@@ -4129,7 +3316,7 @@ func NewRequestResetPassword500Response(resp *http.Response) (RequestResetPasswo
 
 const (
 	ResetPasswordRequestHTTPMethod = "POST"
-	ResetPasswordRequestRoutePath  = "/api/client/reset-password"
+	ResetPasswordRequestRoutePath  = "/iimp/api/client/reset-password"
 )
 
 // Reset the password for the user account.
@@ -4222,7 +3409,7 @@ func NewResetPassword500Response(resp *http.Response) (ResetPassword500Response,
 
 const (
 	SignUpRequestHTTPMethod = "POST"
-	SignUpRequestRoutePath  = "/api/client/signup"
+	SignUpRequestRoutePath  = "/iimp/api/client/signup"
 )
 
 // Register a new user account with the IIMP service.
@@ -4234,11 +3421,12 @@ type SignUpRequest struct {
 
 type SignUpRequestBody struct {
 
-	// Optional display name for the user.
+	// Display name for the user.
 	//
-	// Optional
+	// Required
 	//
-	DisplayName *string `json:"DisplayName,omitempty"`
+	// Must be non-empty
+	DisplayName string `json:"DisplayName"`
 
 	// Email address for the new account. This can be same as the user ID or a different email address. The email address will be used for account recovery.
 	//
@@ -4273,6 +3461,10 @@ func (req *SignUpRequest) Validate() error {
 }
 
 func (o *SignUpRequestBody) Validate() error {
+
+	if strings.TrimSpace(o.DisplayName) == "" {
+		return fmt.Errorf("field 'DisplayName' must be non-empty")
+	}
 
 	if strings.TrimSpace(o.Email) == "" {
 		return fmt.Errorf("field 'Email' must be non-empty")
@@ -4309,6 +3501,16 @@ func NewSignUp400Response(resp *http.Response) (SignUp400Response, error) {
 	return result, nil
 }
 
+type SignUp403Response struct {
+}
+
+func NewSignUp403Response(resp *http.Response) (SignUp403Response, error) {
+	defer resp.Body.Close()
+	result := SignUp403Response{}
+
+	return result, nil
+}
+
 type SignUp409Response struct {
 }
 
@@ -4330,143 +3532,8 @@ func NewSignUp500Response(resp *http.Response) (SignUp500Response, error) {
 }
 
 const (
-	SyncUserEventsRequestHTTPMethod = "GET"
-	SyncUserEventsRequestRoutePath  = "/api/client/events/sync"
-)
-
-// Fetch a list of events for the authenticated user.
-type SyncUserEventsRequest struct {
-
-	// Source: query parameter "cursor"
-	//
-
-	// A cursor (Monotonically increasing per-user sequence number) for pagination. The server will return events starting from this cursor. If not provided, the server will return all available events starting from the oldest event in the system. The response will include a next_cursor field that can be used to fetch the next page of results.
-	//
-	// Optional
-	Cursor *float64
-
-	// Source: query parameter "limit"
-	//
-
-	// The maximum number of events to return in the response. If not provided, the server will use a default limit (e.g., 50). The server may enforce a maximum limit (100) to prevent excessively large responses.
-	//
-	// Optional
-	Limit *float64
-
-	// Authentication parameters
-	Auth SyncUserEventsRequestAuthParams
-}
-
-type SyncUserEventsRequestAuthParams struct {
-
-	// Required Authentication Method
-	// Source: header "Authorization"
-	//
-	// A token used to authenticate the client session. This token is obtained after a successful login and must be included in the header of subsequent requests to access protected resources.
-	//
-	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
-	//
-	Authorization *string
-}
-
-func (req *SyncUserEventsRequest) Validate() error {
-
-	// Authentication parameters validation
-
-	// Validate required auth parameters
-
-	if req.Auth.Authorization == nil {
-		return fmt.Errorf("missing required authentication parameter: Authorization")
-	}
-
-	return nil
-}
-
-type SyncUserEvents200Response struct {
-
-	// Response body
-	Body SyncUserEvents200ResponseBody
-}
-
-type SyncUserEvents200ResponseBodyEventsItem struct {
-
-	// The timestamp when the event was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
-	//
-	// Required
-	//
-	// Must be non-empty
-	CreatedAt string `json:"CreatedAt"`
-
-	// A unique identifier for the event (Monotonically increasing per-user sequence number).
-	//
-	// Required
-	//
-	EventId float64 `json:"EventId"`
-
-	// The type of the event (e.g., "message_received", "conversation_created", etc.). This field can be used by the client to determine how to process the event. For a full list of event types and their corresponding payload structures, refer to the IIMP Client Events documentation [here](https://github.com/iim-protocol/iimp/tree/main/Events.md).
-	//
-	// Required
-	//
-	// Must be non-empty
-	EventType string `json:"EventType"`
-
-	// An optional field containing additional data related to the event. The structure of this object can vary depending on the event type and must conform to the IIMP Client Events documentation. Clients should be designed to handle different payload structures based on the event type.
-	//
-	// Optional
-	//
-	Payload *map[string]any `json:"Payload,omitempty"`
-}
-
-type SyncUserEvents200ResponseBody struct {
-
-	// A list of events for the authenticated user, if any available. The events are ordered by their EventId in Ascending Order. The server may return up to 'limit' events in the response. If there are more events available beyond the returned list, a 'next_cursor' field will be included in the response, which can be used to fetch the next page of results.
-	//
-	// Required
-	//
-	Events []SyncUserEvents200ResponseBodyEventsItem `json:"Events"`
-
-	// A cursor for the next page of results, if available. This field will be included in the response if there are more events available beyond the returned list.
-	//
-	// Optional
-	//
-	NextCursor *float64 `json:"NextCursor,omitempty"`
-}
-
-func NewSyncUserEvents200Response(resp *http.Response) (SyncUserEvents200Response, error) {
-	defer resp.Body.Close()
-	result := SyncUserEvents200Response{}
-
-	decoder := json.NewDecoder(resp.Body)
-	if err := decoder.Decode(&result.Body); err != nil {
-		return result, err
-	}
-
-	return result, nil
-}
-
-type SyncUserEvents401Response struct {
-}
-
-func NewSyncUserEvents401Response(resp *http.Response) (SyncUserEvents401Response, error) {
-	defer resp.Body.Close()
-	result := SyncUserEvents401Response{}
-
-	return result, nil
-}
-
-type SyncUserEvents500Response struct {
-}
-
-func NewSyncUserEvents500Response(resp *http.Response) (SyncUserEvents500Response, error) {
-	defer resp.Body.Close()
-	result := SyncUserEvents500Response{}
-
-	return result, nil
-}
-
-const (
 	UpdateConversationRequestHTTPMethod = "PUT"
-	UpdateConversationRequestRoutePath  = "/api/client/conversations/{conversationId}"
+	UpdateConversationRequestRoutePath  = "/iimp/api/client/conversations/{conversationId}"
 )
 
 // Update an existing conversation. Only for Group Conversations, Direct Conversations cannot be updated.
@@ -4475,7 +3542,7 @@ type UpdateConversationRequest struct {
 	// Source: path parameter "{conversationId}"
 	//
 
-	// The unique identifier of the conversation to update. This is typically a UUIDv7.
+	// The unique identifier of the conversation to update.
 	//
 	// Required
 	ConversationId string
@@ -4549,21 +3616,14 @@ type UpdateConversation200Response struct {
 
 type UpdateConversation200ResponseBodyConversationParticipantsItem struct {
 
-	// The unique identifier of the conversation that the participant is part of. This is typically a UUIDv7.
-	//
-	// Required
-	//
-	// Must be non-empty
-	ConversationId string `json:"ConversationId"`
-
-	// The timestamp when the participant joined the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+	// The timestamp when the participant joined the conversation. Format => RFC3339.
 	//
 	// Required
 	//
 	// Must be non-empty
 	JoinedAt string `json:"JoinedAt"`
 
-	// The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z"). A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
+	// The timestamp when the participant was removed from the conversation. This field is null if the participant is still part of the conversation. Format => RFC3339. A removed participant will not receive new messages in the conversation but can still access the conversation history up until the time they were removed. Owner CANNOT be removed from the conversation.
 	//
 	// Optional
 	//
@@ -4586,7 +3646,7 @@ type UpdateConversation200ResponseBodyConversationParticipantsItem struct {
 
 type UpdateConversation200ResponseBodyConversation struct {
 
-	// A unique identifier for the conversation, typically a UUIDv7.
+	// A unique identifier for the conversation.
 	//
 	// Required
 	//
@@ -4606,12 +3666,18 @@ type UpdateConversation200ResponseBodyConversation struct {
 	// Must be non-empty
 	ConversationOwnerId string `json:"ConversationOwnerId"`
 
-	// The timestamp when the conversation was created. Format => ISO 8601 (e.g., "2024-06-01T12:00:00Z").
+	// The timestamp when the conversation was created. Format => RFC3339.
 	//
 	// Required
 	//
 	// Must be non-empty
 	CreatedAt string `json:"CreatedAt"`
+
+	// A flag indicating whether the conversation is a Direct Message (DM) or a Group Conversation. A Direct Message conversation has exactly 2 participants (including the owner), while a Group Conversation has more than 2 participants.
+	//
+	// Required
+	//
+	IsDM bool `json:"IsDM"`
 
 	// A list of participants in the conversation. The owner of the conversation is also included in this list. Participants can be added or removed by the owner user. Contains at least 2 participants (including the owner) for a Direct Conversation and >2 participants for a Group Conversation.
 	//
@@ -4625,9 +3691,9 @@ type UpdateConversation200ResponseBody struct {
 
 	// Details of the updated conversation.
 	//
-	// Optional
+	// Required
 	//
-	Conversation *UpdateConversation200ResponseBodyConversation `json:"Conversation,omitempty"`
+	Conversation UpdateConversation200ResponseBodyConversation `json:"Conversation"`
 }
 
 func NewUpdateConversation200Response(resp *http.Response) (UpdateConversation200Response, error) {
@@ -4693,18 +3759,20 @@ func NewUpdateConversation500Response(resp *http.Response) (UpdateConversation50
 }
 
 const (
-	UploadAttachmentRequestHTTPMethod = "PUT"
-	UploadAttachmentRequestRoutePath  = "/api/client/attachments/{attachmentId}/bytes"
+	UploadAttachmentRequestHTTPMethod = "POST"
+	UploadAttachmentRequestRoutePath  = "/iimp/api/client/attachments"
 )
 
 // Upload the bytes of an attachment. The bytes go in the request body.
 type UploadAttachmentRequest struct {
 
-	// Source: path parameter "{attachmentId}"
+	// Source: header parameter "X-IIMP-Attachment-Filename"
 	//
 
+	// The original filename of the attachment.
+	//
 	// Required
-	AttachmentId string
+	Filename string
 
 	// Authentication parameters
 	Auth UploadAttachmentRequestAuthParams
@@ -4735,12 +3803,30 @@ func (req *UploadAttachmentRequest) Validate() error {
 	return nil
 }
 
-type UploadAttachment204Response struct {
+type UploadAttachment201Response struct {
+
+	// Response body
+	Body UploadAttachment201ResponseBody
 }
 
-func NewUploadAttachment204Response(resp *http.Response) (UploadAttachment204Response, error) {
+type UploadAttachment201ResponseBody struct {
+
+	// A unique identifier for the file, which should be added to the new message payload to reference the file in messages.
+	//
+	// Required
+	//
+	// Must be non-empty
+	FileId string `json:"FileId"`
+}
+
+func NewUploadAttachment201Response(resp *http.Response) (UploadAttachment201Response, error) {
 	defer resp.Body.Close()
-	result := UploadAttachment204Response{}
+	result := UploadAttachment201Response{}
+
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(&result.Body); err != nil {
+		return result, err
+	}
 
 	return result, nil
 }
@@ -4785,39 +3871,12 @@ func NewUploadAttachment404Response(resp *http.Response) (UploadAttachment404Res
 	return result, nil
 }
 
-type UploadAttachment409Response struct {
-}
-
-func NewUploadAttachment409Response(resp *http.Response) (UploadAttachment409Response, error) {
-	defer resp.Body.Close()
-	result := UploadAttachment409Response{}
-
-	return result, nil
-}
-
 type UploadAttachment413Response struct {
-
-	// Response body
-	Body UploadAttachment413ResponseBody
-}
-
-type UploadAttachment413ResponseBody struct {
-
-	// The total size of the attachment specified during creation in bytes.
-	//
-	// Required
-	//
-	AttachmentSize float64 `json:"AttachmentSize"`
 }
 
 func NewUploadAttachment413Response(resp *http.Response) (UploadAttachment413Response, error) {
 	defer resp.Body.Close()
 	result := UploadAttachment413Response{}
-
-	decoder := json.NewDecoder(resp.Body)
-	if err := decoder.Decode(&result.Body); err != nil {
-		return result, err
-	}
 
 	return result, nil
 }

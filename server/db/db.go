@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 
+	dbmodels "github.com/iim-protocol/iimp/sdk/db-models"
 	"github.com/iim-protocol/iimp/server/config"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -22,7 +23,7 @@ func Connect(ctx context.Context, mongoURI string) (err error) {
 	DB = Client.Database(config.C.MongoDBName)
 	Bucket = DB.GridFSBucket()
 
-	users := DB.Collection(UsersCollection)
+	users := DB.Collection(dbmodels.UsersCollection)
 	if _, err = users.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{{Key: "user_id", Value: 1}},
 		Options: options.Index().SetUnique(true),
@@ -36,7 +37,7 @@ func Connect(ctx context.Context, mongoURI string) (err error) {
 		return err
 	}
 
-	sessions := DB.Collection(SessionsCollection)
+	sessions := DB.Collection(dbmodels.SessionsCollection)
 	if _, err = sessions.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.D{{Key: "user_id", Value: 1}},
 	}); err != nil {
@@ -49,9 +50,36 @@ func Connect(ctx context.Context, mongoURI string) (err error) {
 		return err
 	}
 
-	userPublicKeys := DB.Collection(UserPublicKeysCollection)
+	userPublicKeys := DB.Collection(dbmodels.UserPublicKeysCollection)
 	if _, err = userPublicKeys.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.D{{Key: "user_id", Value: 1}},
+	}); err != nil {
+		return err
+	}
+
+	conversations := DB.Collection(dbmodels.ConversationsCollection)
+	if _, err = conversations.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{{Key: "owner_id", Value: 1}},
+	}); err != nil {
+		return err
+	}
+	if _, err = conversations.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{{Key: "participants.user_id", Value: 1}},
+	}); err != nil {
+		return err
+	}
+
+	userEvents := DB.Collection(dbmodels.UserEventsCollection)
+	// Compound index for cursor pagination in FetchEvents
+	if _, err = userEvents.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{{Key: "user_id", Value: 1}, {Key: "_id", Value: 1}},
+	}); err != nil {
+		return err
+	}
+
+	messages := DB.Collection(dbmodels.MessagesCollection)
+	if _, err = messages.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{{Key: "conversation_id", Value: 1}},
 	}); err != nil {
 		return err
 	}

@@ -38,8 +38,14 @@ func init() {
 }
 
 func startServer(cmd *cobra.Command) {
+	// Load configuration
 	if configPath == "" {
 		cmd.Println("Error: --config (-c) flag is required")
+		return
+	}
+	err := config.Load(configPath)
+	if err != nil {
+		cmd.Println("Error loading config:", err)
 		return
 	}
 
@@ -49,13 +55,6 @@ func startServer(cmd *cobra.Command) {
 	// Load JWT signing keys
 	if err := auth.Init(ctxBootstrap, config.C.JWTPrivateKeyPath, config.C.JWTPublicKeyPath); err != nil {
 		cmd.Println("Error initializing JWT signing keys:", err)
-		return
-	}
-
-	// Load configuration
-	err := config.Load(configPath)
-	if err != nil {
-		cmd.Println("Error loading config:", err)
 		return
 	}
 
