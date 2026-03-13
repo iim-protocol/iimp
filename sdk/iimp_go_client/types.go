@@ -46,12 +46,26 @@ type AddPublicKeyRequest struct {
 
 type AddPublicKeyRequestBody struct {
 
+	// A unique identifier for the uploaded public key. This ID can be used to reference the key in future operations, such as encrypting messages for specific recipients or managing keys.
+	//
+	// Required
+	//
+	// Must be non-empty
+	KeyId string `json:"KeyId"`
+
 	// The public key to be added for end-to-end encryption. The key should be Base64URL Encoded X25519 Key.
 	//
 	// Required
 	//
 	// Must be non-empty
 	PublicKey string `json:"PublicKey"`
+
+	// Timestamp of key upload. Format => RFC3339.
+	//
+	// Required
+	//
+	// Must be non-empty
+	Timestamp string `json:"Timestamp"`
 }
 
 type AddPublicKeyRequestAuthParams struct {
@@ -84,43 +98,27 @@ func (req *AddPublicKeyRequest) Validate() error {
 
 func (o *AddPublicKeyRequestBody) Validate() error {
 
+	if strings.TrimSpace(o.KeyId) == "" {
+		return fmt.Errorf("field 'KeyId' must be non-empty")
+	}
+
 	if strings.TrimSpace(o.PublicKey) == "" {
 		return fmt.Errorf("field 'PublicKey' must be non-empty")
+	}
+
+	if strings.TrimSpace(o.Timestamp) == "" {
+		return fmt.Errorf("field 'Timestamp' must be non-empty")
 	}
 
 	return nil
 }
 
 type AddPublicKey201Response struct {
-
-	// Response body
-	Body AddPublicKey201ResponseBody
-}
-
-type AddPublicKey201ResponseBody struct {
-
-	// A unique identifier for the uploaded public key. This ID can be used to reference the key in future operations, such as encrypting messages for specific recipients or managing keys.
-	//
-	// Required
-	//
-	// Must be non-empty
-	KeyId string `json:"KeyId"`
-
-	// The timestamp when the public key was uploaded to the server. This can be used to determine the age of the key and manage key rotation policies.
-	//
-	// Required
-	//
-	UploadedAt string `json:"UploadedAt"`
 }
 
 func NewAddPublicKey201Response(resp *http.Response) (AddPublicKey201Response, error) {
 	defer resp.Body.Close()
 	result := AddPublicKey201Response{}
-
-	decoder := json.NewDecoder(resp.Body)
-	if err := decoder.Decode(&result.Body); err != nil {
-		return result, err
-	}
 
 	return result, nil
 }
@@ -562,127 +560,6 @@ type DownloadAttachment500Response struct {
 func NewDownloadAttachment500Response(resp *http.Response) (DownloadAttachment500Response, error) {
 	defer resp.Body.Close()
 	result := DownloadAttachment500Response{}
-
-	return result, nil
-}
-
-const (
-	DownloadAttachmentBytesFederationRequestHTTPMethod = "GET"
-	DownloadAttachmentBytesFederationRequestRoutePath  = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes"
-)
-
-// \"FEDERATION\" Download the bytes of an attachment from another server. This is a noop endpoint for documentation purposes, the server should implement fetching the actual bytes using the provided endpoint. Server must implement this, requesting server needs to fetch the bytes NOT using the SDK.
-type DownloadAttachmentBytesFederationRequest struct {
-
-	// Source: path parameter "{fileId}"
-	//
-
-	// Unique identifier of the file to fetch.
-	//
-	// Required
-	FileId string
-
-	// Source: path parameter "{messageId}"
-	//
-
-	// Unique identifier of the message that the file/attachment belongs to.
-	//
-	// Required
-	MessageId string
-
-	// Source: path parameter "{conversationId}"
-	//
-
-	// Unique identifier of the conversation that the message belongs to.
-	//
-	// Required
-	ConversationId string
-
-	// Authentication parameters
-	Auth DownloadAttachmentBytesFederationRequestAuthParams
-}
-
-type DownloadAttachmentBytesFederationRequestAuthParams struct {
-
-	// Required Authentication Method
-	// Source: header "Authorization"
-	//
-	// Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint.
-	//
-	// Format (NOT ENFORCED): Bearer <JWT (RFC 7519)>
-	//
-	Authorization *string
-}
-
-func (req *DownloadAttachmentBytesFederationRequest) Validate() error {
-
-	// Authentication parameters validation
-
-	// Validate required auth parameters
-
-	if req.Auth.Authorization == nil {
-		return fmt.Errorf("missing required authentication parameter: Authorization")
-	}
-
-	return nil
-}
-
-type DownloadAttachmentBytesFederation200Response struct {
-}
-
-func NewDownloadAttachmentBytesFederation200Response(resp *http.Response) (DownloadAttachmentBytesFederation200Response, error) {
-	defer resp.Body.Close()
-	result := DownloadAttachmentBytesFederation200Response{}
-
-	return result, nil
-}
-
-type DownloadAttachmentBytesFederation400Response struct {
-}
-
-func NewDownloadAttachmentBytesFederation400Response(resp *http.Response) (DownloadAttachmentBytesFederation400Response, error) {
-	defer resp.Body.Close()
-	result := DownloadAttachmentBytesFederation400Response{}
-
-	return result, nil
-}
-
-type DownloadAttachmentBytesFederation401Response struct {
-}
-
-func NewDownloadAttachmentBytesFederation401Response(resp *http.Response) (DownloadAttachmentBytesFederation401Response, error) {
-	defer resp.Body.Close()
-	result := DownloadAttachmentBytesFederation401Response{}
-
-	return result, nil
-}
-
-type DownloadAttachmentBytesFederation403Response struct {
-}
-
-func NewDownloadAttachmentBytesFederation403Response(resp *http.Response) (DownloadAttachmentBytesFederation403Response, error) {
-	defer resp.Body.Close()
-	result := DownloadAttachmentBytesFederation403Response{}
-
-	return result, nil
-}
-
-type DownloadAttachmentBytesFederation404Response struct {
-}
-
-func NewDownloadAttachmentBytesFederation404Response(resp *http.Response) (DownloadAttachmentBytesFederation404Response, error) {
-	defer resp.Body.Close()
-	result := DownloadAttachmentBytesFederation404Response{}
-
-	return result, nil
-}
-
-type DownloadAttachmentBytesFederation500Response struct {
-}
-
-func NewDownloadAttachmentBytesFederation500Response(resp *http.Response) (DownloadAttachmentBytesFederation500Response, error) {
-	defer resp.Body.Close()
-	result := DownloadAttachmentBytesFederation500Response{}
 
 	return result, nil
 }
@@ -1143,6 +1020,16 @@ func NewGetUserInfoFederation200Response(resp *http.Response) (GetUserInfoFedera
 	if err := decoder.Decode(&result.Body); err != nil {
 		return result, err
 	}
+
+	return result, nil
+}
+
+type GetUserInfoFederation400Response struct {
+}
+
+func NewGetUserInfoFederation400Response(resp *http.Response) (GetUserInfoFederation400Response, error) {
+	defer resp.Body.Close()
+	result := GetUserInfoFederation400Response{}
 
 	return result, nil
 }
@@ -1679,6 +1566,13 @@ type MessageFederationRequestBody struct {
 
 type MessageFederationRequestBodyAttachmentsItem struct {
 
+	// The nonce used in the encryption of the attachment file. This should be a unique value for each attachment encrypted with the same AES key to ensure security. The symmetric key used is the same as the Version 1 message content.
+	//
+	// Required
+	//
+	// Must be non-empty
+	AttachmentNonce string `json:"AttachmentNonce"`
+
 	// The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
 	//
 	// Required
@@ -1908,6 +1802,10 @@ func (o *MessageFederationRequestBody) Validate() error {
 	return nil
 }
 func (o *MessageFederationRequestBodyAttachmentsItem) Validate() error {
+
+	if strings.TrimSpace(o.AttachmentNonce) == "" {
+		return fmt.Errorf("field 'AttachmentNonce' must be non-empty")
+	}
 
 	if strings.TrimSpace(o.ContentType) == "" {
 		return fmt.Errorf("field 'ContentType' must be non-empty")
@@ -2320,6 +2218,13 @@ type NewMessageRequestBody struct {
 
 type NewMessageRequestBodyAttachmentsItem struct {
 
+	// The nonce used in the encryption of the attachment file. This should be a unique value for each attachment encrypted with the same AES key to ensure security. The symmetric key used is the same as the Version 1 message content.
+	//
+	// Required
+	//
+	// Must be non-empty
+	AttachmentNonce string `json:"AttachmentNonce"`
+
 	// The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
 	//
 	// Required
@@ -2476,6 +2381,10 @@ func (o *NewMessageRequestBody) Validate() error {
 	return nil
 }
 func (o *NewMessageRequestBodyAttachmentsItem) Validate() error {
+
+	if strings.TrimSpace(o.AttachmentNonce) == "" {
+		return fmt.Errorf("field 'AttachmentNonce' must be non-empty")
+	}
 
 	if strings.TrimSpace(o.ContentType) == "" {
 		return fmt.Errorf("field 'ContentType' must be non-empty")

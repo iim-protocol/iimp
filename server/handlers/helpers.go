@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"time"
@@ -87,10 +88,14 @@ func broadcastConversation(ctx context.Context, conversation *dbmodels.Conversat
 			}
 		} else {
 			// Create user event for local participant
+			marshalledConversation, err := json.Marshal(conversation)
+			if err != nil {
+				return fmt.Errorf("failed to marshal conversation for user event: %w", err)
+			}
 			userEvent := dbmodels.UserEvent{
 				UserId:    participant.UserId,
 				EventType: dbmodels.UserEventTypeConversationUpsert,
-				Payload:   bson.M{"conversation": conversation},
+				Payload:   bson.M{"conversation": string(marshalledConversation)},
 			}
 
 			if _, err := db.DB.Collection(dbmodels.UserEventsCollection).InsertOne(ctx, userEvent); err != nil {
@@ -233,10 +238,14 @@ func broadcastMessage(ctx context.Context, message *dbmodels.Message, conversati
 			return fmt.Errorf("failed to determine if message sender is local: %w", err)
 		} else if isLocalUser {
 			// Local user, create a new user event
+			marshalledMessage, err := json.Marshal(message)
+			if err != nil {
+				return fmt.Errorf("failed to marshal message for user event: %w", err)
+			}
 			userEvent := dbmodels.UserEvent{
 				UserId:    participant.UserId,
 				EventType: dbmodels.UserEventTypeMessageUpsert,
-				Payload:   bson.M{"message": message},
+				Payload:   bson.M{"message": string(marshalledMessage)},
 			}
 
 			if _, err := db.DB.Collection(dbmodels.UserEventsCollection).InsertOne(ctx, userEvent); err != nil {
@@ -307,10 +316,11 @@ func createMessageBroadcastRequestBody(message *dbmodels.Message, conversation *
 	}
 	for i, attachment := range message.Attachments {
 		reqBody.Attachments[i] = iimp_go_client.MessageFederationRequestBodyAttachmentsItem{
-			FileId:      attachment.FileId.Hex(),
-			Filename:    attachment.Filename,
-			ContentType: attachment.ContentType,
-			Size:        float64(attachment.Size),
+			FileId:          attachment.FileId.Hex(),
+			Filename:        attachment.Filename,
+			ContentType:     attachment.ContentType,
+			Size:            float64(attachment.Size),
+			AttachmentNonce: attachment.AttachmentNonce,
 		}
 	}
 	for i, content := range message.Contents {

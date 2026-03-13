@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/iim-protocol/iimp/sdk/db-models"
+	dbmodels "github.com/iim-protocol/iimp/sdk/db-models"
 	"github.com/iim-protocol/iimp/server/auth"
 	"github.com/iim-protocol/iimp/server/db"
 	"github.com/iim-protocol/iimp/server/iimpserver"
@@ -29,29 +29,21 @@ func AddPublicKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	timestamp, err := time.Parse(time.RFC3339, req.Body.Timestamp)
+
 	publicKey := dbmodels.UserPublicKey{
+		Id:        req.Body.KeyId,
 		UserId:    claims.Subject,
 		PublicKey: req.Body.PublicKey,
+		Timestamp: bson.NewDateTimeFromTime(timestamp),
 	}
 
-	result, err := db.DB.Collection(dbmodels.UserPublicKeysCollection).InsertOne(r.Context(), publicKey)
+	_, err = db.DB.Collection(dbmodels.UserPublicKeysCollection).InsertOne(r.Context(), publicKey)
 	if err != nil {
 		logger.Error.Println("error inserting public key into database for AddPublicKey request:", err)
 		iimpserver.WriteAddPublicKey500Response(w, iimpserver.AddPublicKey500Response{})
 		return
 	}
 
-	publicKeyId, ok := result.InsertedID.(bson.ObjectID)
-	if !ok {
-		logger.Error.Println("error converting inserted ID to ObjectID for AddPublicKey request")
-		iimpserver.WriteAddPublicKey500Response(w, iimpserver.AddPublicKey500Response{})
-		return
-	}
-
-	iimpserver.WriteAddPublicKey201Response(w, iimpserver.AddPublicKey201Response{
-		Body: iimpserver.AddPublicKey201ResponseBody{
-			KeyId:      publicKeyId.Hex(),
-			UploadedAt: publicKeyId.Timestamp().Format(time.RFC3339),
-		},
-	})
+	iimpserver.WriteAddPublicKey201Response(w, iimpserver.AddPublicKey201Response{})
 }

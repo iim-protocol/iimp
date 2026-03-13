@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"slices"
 	"time"
 
 	dbmodels "github.com/iim-protocol/iimp/sdk/db-models"
@@ -48,21 +49,9 @@ func NewConversation(w http.ResponseWriter, r *http.Request) {
 	if req.Body.ConversationName != nil {
 		conversationName = *req.Body.ConversationName
 	}
-	conversation := dbmodels.Conversation{
-		Name:    conversationName,
-		OwnerId: claims.Subject,
-		IsDM:    len(req.Body.ParticipantUserIds) == 1, // 2 participant = DM (1 participant + owner), more than 2 participants = group chat
-		Participants: []dbmodels.ConversationParticipant{
-			{
-				UserId:          claims.Subject,
-				UserDisplayName: ownerUser.DisplayName,
-				JoinedAt:        bson.NewDateTimeFromTime(time.Now()),
-				RemovedAt:       nil,
-			},
-		},
-	}
 
 	participantIds := req.Body.ParticipantUserIds
+	participants := make([]dbmodels.ConversationParticipant, 0)
 	for _, id := range participantIds {
 		participant, err := createConversationParticipantObject(r.Context(), id)
 		if err != nil {
@@ -82,7 +71,23 @@ func NewConversation(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		conversation.Participants = append(conversation.Participants, participant)
+		participants = append(participants, participant)
+	}
+	isOwnerIncluded := slices.Contains(participantIds, claims.Subject)
+	if !isOwnerIncluded {
+		participants = append(participants, dbmodels.ConversationParticipant{
+			UserId:          claims.Subject,
+			UserDisplayName: ownerUser.DisplayName,
+			JoinedAt:        bson.NewDateTimeFromTime(time.Now()),
+			RemovedAt:       nil,
+		})
+	}
+
+	conversation := dbmodels.Conversation{
+		Name:         conversationName,
+		OwnerId:      claims.Subject,
+		IsDM:         len(req.Body.ParticipantUserIds) == 2, // 2 participant = DM (1 participant + owner), more than 2 participants = group chat
+		Participants: participants,
 	}
 	insertResult, err := db.DB.Collection(dbmodels.ConversationsCollection).InsertOne(r.Context(), conversation)
 	if err != nil {

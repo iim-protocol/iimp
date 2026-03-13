@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
+	"github.com/iim-protocol/iimp/client/utils"
 	"github.com/iim-protocol/iimp/sdk/iimp_go_client"
 	"github.com/spf13/cobra"
 )
@@ -20,14 +21,6 @@ var signupCmd = &cobra.Command{
 		var userId, password, displayName, email, serverUrl string
 
 		form := huh.NewForm(
-			huh.NewGroup(
-				huh.NewInput().Title("Server URL").Validate(func(s string) error {
-					if strings.TrimSpace(s) == "" {
-						return fmt.Errorf("server URL cannot be empty")
-					}
-					return nil
-				}).Value(&serverUrl),
-			),
 			huh.NewGroup(
 				huh.NewInput().Title("User ID").Description("(localpart@domain)").Validate(func(s string) error {
 					if strings.TrimSpace(s) == "" {
@@ -68,6 +61,13 @@ var signupCmd = &cobra.Command{
 			fmt.Println("Error:", err)
 			return
 		}
+
+		domain, err := utils.ExtractDomainFromUserId(userId)
+		if err != nil {
+			fmt.Println("Error extracting domain from user ID:", err)
+			return
+		}
+		serverUrl = "https://" + domain
 
 		iimpClient := iimp_go_client.NewIIMP(serverUrl)
 		result, err := iimpClient.SignUp(cmd.Context(), iimp_go_client.SignUpRequest{

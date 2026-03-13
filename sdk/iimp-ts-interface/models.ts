@@ -66,11 +66,25 @@ export type AddPublicKeyRequest = {
 export type AddPublicKeyRequestBody = {
   
   /**
+  * A unique identifier for the uploaded public key. This ID can be used to reference the key in future operations, such as encrypting messages for specific recipients or managing keys.
+  * Required
+  *  Must be non-empty
+  */
+  KeyId: string;
+
+  /**
   * The public key to be added for end-to-end encryption. The key should be Base64URL Encoded X25519 Key.
   * Required
   *  Must be non-empty
   */
   PublicKey: string;
+
+  /**
+  * Timestamp of key upload. Format => RFC3339.
+  * Required
+  *  Must be non-empty
+  */
+  Timestamp: string;
 
 }
 
@@ -126,8 +140,26 @@ function ValidateAddPublicKeyRequestBody(o: AddPublicKeyRequestBody) : IIMPError
   
   
   
+  if (o.KeyId.trim() === "") {
+    throw new Error("Field 'KeyId' must be non-empty");
+  }
+  
+  
+  
+  
+  
+  
   if (o.PublicKey.trim() === "") {
     throw new Error("Field 'PublicKey' must be non-empty");
+  }
+  
+  
+  
+  
+  
+  
+  if (o.Timestamp.trim() === "") {
+    throw new Error("Field 'Timestamp' must be non-empty");
   }
   
   
@@ -145,31 +177,6 @@ export type AddPublicKey201Response = {
   
 
   
-  /**
-   * Response body
-   */
-  Body: AddPublicKey201ResponseBody;
-  
-}
-
-
-
-export type AddPublicKey201ResponseBody = {
-  
-  /**
-  * A unique identifier for the uploaded public key. This ID can be used to reference the key in future operations, such as encrypting messages for specific recipients or managing keys.
-  * Required
-  *  Must be non-empty
-  */
-  KeyId: string;
-
-  /**
-  * The timestamp when the public key was uploaded to the server. This can be used to determine the age of the key and manage key rotation policies.
-  * Required
-  * 
-  */
-  UploadedAt: string;
-
 }
 
 
@@ -180,13 +187,6 @@ export async function NewAddPublicKey201Response(resp: Response): Promise<AddPub
 
   
 
-  
-  try {
-    const body = await resp.json();
-    result.Body = body;
-  } catch (err) {
-    throw new IIMPError(IIMPErrorReasonDecodeError, "Failed to decode response body", err instanceof Error ? err : new Error(String(err)));
-  }
   
   return result
 }
@@ -955,218 +955,6 @@ export async function NewDownloadAttachment500Response(resp: Response): Promise<
 
 
 
-const DownloadAttachmentBytesFederationRequestHTTPMethod = "GET";
-const DownloadAttachmentBytesFederationRequestRoutePath   = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes";
-
-/**
- * \"FEDERATION\" Download the bytes of an attachment from another server. This is a noop endpoint for documentation purposes, the server should implement fetching the actual bytes using the provided endpoint. Server must implement this, requesting server needs to fetch the bytes NOT using the SDK.
- */
-export type DownloadAttachmentBytesFederationRequest = {
-
-  /**
-  * Source: path parameter "{fileId}"
-  
-  * Unique identifier of the file to fetch.
-  * 
-  * Required
-  */
-  FileId: string;
-
-
-  /**
-  * Source: path parameter "{messageId}"
-  
-  * Unique identifier of the message that the file/attachment belongs to.
-  * 
-  * Required
-  */
-  MessageId: string;
-
-
-  /**
-  * Source: path parameter "{conversationId}"
-  
-  * Unique identifier of the conversation that the message belongs to.
-  * 
-  * Required
-  */
-  ConversationId: string;
-
-
-
-
-
-  /**
-  * Authentication parameters
-  */
-  Auth: DownloadAttachmentBytesFederationRequestAuthParams;
-
-
-}
-
-
-
-
-export type DownloadAttachmentBytesFederationRequestAuthParams = {
-  
-  
-  /**
-  * Required Authentication Method
-  * Source: header "Authorization"
-  *  Description: Server JWT signed with the requesting server's private key. This token is used for authenticating requests between servers during federation. The receiving server will verify the token using the requesting server's public key, which can be obtained from the requesting server's JWKS endpoint. 
-  *  Format (NOT ENFORCED): Bearer <JWT (RFC 7519)> 
-  */
-  Authorization?: string;
-  
-  
-
-  
-};
-
-
-
-export function ValidateDownloadAttachmentBytesFederationRequest(req: DownloadAttachmentBytesFederationRequest) : IIMPError | null {
-  if (!req) {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Request is required");
-  }
-
-  
-
-  
-  
-  if (!req.Auth.Authorization || req.Auth.Authorization.trim() === "") {
-    throw new IIMPError(IIMPErrorReasonInvalidRequest, "Missing required authentication parameter: Authorization");
-  }
-  
-  
-
-  
-
-  return null;
-}
-
-
-
-
-
-
-
-export type DownloadAttachmentBytesFederation200Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewDownloadAttachmentBytesFederation200Response(resp: Response): Promise<DownloadAttachmentBytesFederation200Response> {
-  var result = {} as DownloadAttachmentBytesFederation200Response;
-
-  
-
-  
-  return result
-}
-
-
-export type DownloadAttachmentBytesFederation400Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewDownloadAttachmentBytesFederation400Response(resp: Response): Promise<DownloadAttachmentBytesFederation400Response> {
-  var result = {} as DownloadAttachmentBytesFederation400Response;
-
-  
-
-  
-  return result
-}
-
-
-export type DownloadAttachmentBytesFederation401Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewDownloadAttachmentBytesFederation401Response(resp: Response): Promise<DownloadAttachmentBytesFederation401Response> {
-  var result = {} as DownloadAttachmentBytesFederation401Response;
-
-  
-
-  
-  return result
-}
-
-
-export type DownloadAttachmentBytesFederation403Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewDownloadAttachmentBytesFederation403Response(resp: Response): Promise<DownloadAttachmentBytesFederation403Response> {
-  var result = {} as DownloadAttachmentBytesFederation403Response;
-
-  
-
-  
-  return result
-}
-
-
-export type DownloadAttachmentBytesFederation404Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewDownloadAttachmentBytesFederation404Response(resp: Response): Promise<DownloadAttachmentBytesFederation404Response> {
-  var result = {} as DownloadAttachmentBytesFederation404Response;
-
-  
-
-  
-  return result
-}
-
-
-export type DownloadAttachmentBytesFederation500Response = {
-  
-
-  
-}
-
-
-
-
-export async function NewDownloadAttachmentBytesFederation500Response(resp: Response): Promise<DownloadAttachmentBytesFederation500Response> {
-  var result = {} as DownloadAttachmentBytesFederation500Response;
-
-  
-
-  
-  return result
-}
-
-
-
-
 const EditMessageRequestHTTPMethod = "PUT";
 const EditMessageRequestRoutePath   = "/iimp/api/client/conversations/{conversationId}/messages/{messageId}";
 
@@ -1889,6 +1677,25 @@ export async function NewGetUserInfoFederation200Response(resp: Response): Promi
   } catch (err) {
     throw new IIMPError(IIMPErrorReasonDecodeError, "Failed to decode response body", err instanceof Error ? err : new Error(String(err)));
   }
+  
+  return result
+}
+
+
+export type GetUserInfoFederation400Response = {
+  
+
+  
+}
+
+
+
+
+export async function NewGetUserInfoFederation400Response(resp: Response): Promise<GetUserInfoFederation400Response> {
+  var result = {} as GetUserInfoFederation400Response;
+
+  
+
   
   return result
 }
@@ -2771,6 +2578,13 @@ export type MessageFederationRequestBody = {
 export type MessageFederationRequestBodyAttachmentsItem = {
   
   /**
+  * The nonce used in the encryption of the attachment file. This should be a unique value for each attachment encrypted with the same AES key to ensure security. The symmetric key used is the same as the Version 1 message content.
+  * Required
+  *  Must be non-empty
+  */
+  AttachmentNonce: string;
+
+  /**
   * The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
   * Required
   *  Must be non-empty
@@ -3078,6 +2892,15 @@ function ValidateMessageFederationRequestBody(o: MessageFederationRequestBody) :
 }
 
 function ValidateMessageFederationRequestBodyAttachmentsItem(o: MessageFederationRequestBodyAttachmentsItem) : IIMPError | null {
+  
+  
+  
+  if (o.AttachmentNonce.trim() === "") {
+    throw new Error("Field 'AttachmentNonce' must be non-empty");
+  }
+  
+  
+  
   
   
   
@@ -3784,6 +3607,13 @@ export type NewMessageRequestBody = {
 export type NewMessageRequestBodyAttachmentsItem = {
   
   /**
+  * The nonce used in the encryption of the attachment file. This should be a unique value for each attachment encrypted with the same AES key to ensure security. The symmetric key used is the same as the Version 1 message content.
+  * Required
+  *  Must be non-empty
+  */
+  AttachmentNonce: string;
+
+  /**
   * The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
   * Required
   *  Must be non-empty
@@ -3977,6 +3807,15 @@ function ValidateNewMessageRequestBody(o: NewMessageRequestBody) : IIMPError | n
 }
 
 function ValidateNewMessageRequestBodyAttachmentsItem(o: NewMessageRequestBodyAttachmentsItem) : IIMPError | null {
+  
+  
+  
+  if (o.AttachmentNonce.trim() === "") {
+    throw new Error("Field 'AttachmentNonce' must be non-empty");
+  }
+  
+  
+  
   
   
   

@@ -21,16 +21,7 @@ func GetUserPublicKeyById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var userPublicKey dbmodels.UserPublicKey
-
-	// Convert KeyId string to ObjectID
-	objectId, err := bson.ObjectIDFromHex(req.KeyId)
-	if err != nil {
-		logger.Error.Println("error converting KeyId to ObjectID:", err)
-		iimpserver.WriteGetUserPublicKeyById400Response(w, iimpserver.GetUserPublicKeyById400Response{})
-		return
-	}
-
-	filter := bson.D{{Key: "_id", Value: objectId}, {Key: "user_id", Value: req.UserId}}
+	filter := bson.D{{Key: "_id", Value: req.KeyId}, {Key: "user_id", Value: req.UserId}}
 
 	err = db.DB.Collection(dbmodels.UserPublicKeysCollection).FindOne(r.Context(), filter).Decode(&userPublicKey)
 	if err != nil {
@@ -46,9 +37,9 @@ func GetUserPublicKeyById(w http.ResponseWriter, r *http.Request) {
 	// Return the user's public key in the response
 	iimpserver.WriteGetUserPublicKeyById200Response(w, iimpserver.GetUserPublicKeyById200Response{
 		Body: iimpserver.GetUserPublicKeyById200ResponseBody{
-			KeyId:      userPublicKey.Id.Hex(),
+			KeyId:      userPublicKey.Id,
 			PublicKey:  userPublicKey.PublicKey,
-			UploadedAt: userPublicKey.Id.Timestamp().Format(time.RFC3339),
+			UploadedAt: userPublicKey.Timestamp.Time().Format(time.RFC3339),
 			UserId:     userPublicKey.UserId,
 		},
 	})

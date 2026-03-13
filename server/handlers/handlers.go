@@ -170,6 +170,31 @@ func RegisterHandlers(r *chi.Mux) {
 			iimpserver.PullUserEventsRequestHTTPMethod,
 		),
 	)
+
+	// Federation endpoints
+	r.HandleFunc(
+		iimpserver.ConversationFederationRequestRoutePath,
+		withMethod(
+			ConversationFederation,
+			iimpserver.ConversationFederationRequestHTTPMethod,
+		),
+	)
+
+	r.HandleFunc(
+		iimpserver.MessageFederationRequestRoutePath,
+		withMethod(
+			MessageFederation,
+			iimpserver.MessageFederationRequestHTTPMethod,
+		),
+	)
+
+	r.HandleFunc(
+		iimpserver.GetUserInfoFederationRequestRoutePath,
+		withMethod(
+			GetUserInfoFederation,
+			iimpserver.GetUserInfoFederationRequestHTTPMethod,
+		),
+	)
 }
 
 func withMethod(handler http.HandlerFunc, allowedMethod string) http.HandlerFunc {

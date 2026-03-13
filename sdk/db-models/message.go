@@ -15,11 +15,12 @@ type Message struct {
 }
 
 type Attachment struct {
-	FileId      bson.ObjectID `bson:"file_id"`      // ID of the file in GridFS
-	Filename    string        `bson:"filename"`     // Original filename of the attachment
-	ContentType string        `bson:"content_type"` // MIME type of the attachment
-	Size        int64         `bson:"size"`         // Size of the attachment in bytes
-	FileHash    string        `bson:"file_hash"`    // SHA256 Hash of the file contents for integrity verification
+	FileId          bson.ObjectID `bson:"file_id"`          // ID of the file in GridFS
+	Filename        string        `bson:"filename"`         // Original filename of the attachment
+	ContentType     string        `bson:"content_type"`     // MIME type of the attachment
+	Size            int64         `bson:"size"`             // Size of the attachment in bytes
+	FileHash        string        `bson:"file_hash"`        // SHA256 Hash of the file contents for integrity verification
+	AttachmentNonce string        `bson:"attachment_nonce"` // Nonce used for encrypting the attachment
 }
 
 type MessageUserSpecificDataItem struct {

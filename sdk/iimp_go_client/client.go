@@ -601,184 +601,6 @@ func (c *IIMP) DownloadAttachment(ctx context.Context, params DownloadAttachment
 	}
 }
 
-type DownloadAttachmentBytesFederationResult struct {
-	StatusCode int
-
-	Response200 DownloadAttachmentBytesFederation200Response
-
-	Response400 DownloadAttachmentBytesFederation400Response
-
-	Response401 DownloadAttachmentBytesFederation401Response
-
-	Response403 DownloadAttachmentBytesFederation403Response
-
-	Response404 DownloadAttachmentBytesFederation404Response
-
-	Response500 DownloadAttachmentBytesFederation500Response
-
-	UnknownResponse *UnknownStatusResponse
-}
-
-func (c *IIMP) DownloadAttachmentBytesFederation(ctx context.Context, params DownloadAttachmentBytesFederationRequest) (DownloadAttachmentBytesFederationResult, error) {
-	if err := params.Validate(); err != nil {
-		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid request parameters",
-			Err:     err,
-		}
-	}
-
-	path := "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes"
-
-	pathParamFileId, err := paramToString(params.FileId, "path parameter: FileId", "string", true)
-	if err != nil {
-		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: fileId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{fileId}", fmt.Sprintf("%v", pathParamFileId))
-
-	pathParamMessageId, err := paramToString(params.MessageId, "path parameter: MessageId", "string", true)
-	if err != nil {
-		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: messageId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{messageId}", fmt.Sprintf("%v", pathParamMessageId))
-
-	pathParamConversationId, err := paramToString(params.ConversationId, "path parameter: ConversationId", "string", true)
-	if err != nil {
-		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid path parameter: conversationId",
-			Err:     err,
-		}
-	}
-	path = strings.ReplaceAll(path, "{conversationId}", fmt.Sprintf("%v", pathParamConversationId))
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		"GET",
-		c.baseURL+path,
-		nil,
-	)
-	if err != nil {
-		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "failed to create HTTP request",
-			Err:     err,
-		}
-	}
-
-	authAuthorization, err := paramToString(params.Auth.Authorization, "auth parameter: Authorization", "*string", true)
-	if err != nil {
-		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonInvalidRequest,
-			Message: "invalid auth parameter: Authorization",
-			Err:     err,
-		}
-	}
-	req.Header.Set("Authorization", authAuthorization)
-
-	resp, err := c.do(req)
-	if err != nil {
-		return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-			Reason:  IIMPErrorReasonNetworkError,
-			Message: "network error during HTTP request",
-			Err:     err,
-		}
-	}
-	// resp.Body will be closed in response handlers
-	response := DownloadAttachmentBytesFederationResult{
-		StatusCode: resp.StatusCode,
-	}
-	switch resp.StatusCode {
-
-	case 200:
-		result, err := NewDownloadAttachmentBytesFederation200Response(resp)
-		if err != nil {
-			return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response200 = result
-		return response, nil
-
-	case 400:
-		result, err := NewDownloadAttachmentBytesFederation400Response(resp)
-		if err != nil {
-			return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response400 = result
-		return response, nil
-
-	case 401:
-		result, err := NewDownloadAttachmentBytesFederation401Response(resp)
-		if err != nil {
-			return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response401 = result
-		return response, nil
-
-	case 403:
-		result, err := NewDownloadAttachmentBytesFederation403Response(resp)
-		if err != nil {
-			return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response403 = result
-		return response, nil
-
-	case 404:
-		result, err := NewDownloadAttachmentBytesFederation404Response(resp)
-		if err != nil {
-			return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response404 = result
-		return response, nil
-
-	case 500:
-		result, err := NewDownloadAttachmentBytesFederation500Response(resp)
-		if err != nil {
-			return DownloadAttachmentBytesFederationResult{}, &IIMPError{
-				Reason:  IIMPErrorReasonDecodeError,
-				Message: "failed to decode response",
-				Err:     err,
-			}
-		}
-		response.Response500 = result
-		return response, nil
-
-	default:
-		response.UnknownResponse = &UnknownStatusResponse{
-			StatusCode: resp.StatusCode,
-			Response:   resp,
-		}
-		return response, nil
-	}
-}
-
 type EditMessageResult struct {
 	StatusCode int
 
@@ -1044,6 +866,8 @@ type GetUserInfoFederationResult struct {
 
 	Response200 GetUserInfoFederation200Response
 
+	Response400 GetUserInfoFederation400Response
+
 	Response401 GetUserInfoFederation401Response
 
 	Response404 GetUserInfoFederation404Response
@@ -1122,6 +946,18 @@ func (c *IIMP) GetUserInfoFederation(ctx context.Context, params GetUserInfoFede
 			}
 		}
 		response.Response200 = result
+		return response, nil
+
+	case 400:
+		result, err := NewGetUserInfoFederation400Response(resp)
+		if err != nil {
+			return GetUserInfoFederationResult{}, &IIMPError{
+				Reason:  IIMPErrorReasonDecodeError,
+				Message: "failed to decode response",
+				Err:     err,
+			}
+		}
+		response.Response400 = result
 		return response, nil
 
 	case 401:

@@ -109,6 +109,22 @@ func WriteGetUserInfoFederation200Response(w http.ResponseWriter, response GetUs
 
 }
 
+type GetUserInfoFederation400Response struct {
+}
+
+// Invalid input data.
+//
+// This function WILL CALL w.WriteHeader(), so ensure that no other calls to
+// w.WriteHeader() are made before calling this function.
+func WriteGetUserInfoFederation400Response(w http.ResponseWriter, response GetUserInfoFederation400Response) error {
+	// Set headers, if any
+
+	// Set status code and write the header
+	w.WriteHeader(400)
+	return nil
+
+}
+
 type GetUserInfoFederation401Response struct {
 }
 

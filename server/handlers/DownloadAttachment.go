@@ -109,7 +109,6 @@ func DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	_, err = db.Bucket.DownloadToStream(r.Context(), fileIdBson, w)
 	if err != nil {
 		logger.Error.Printf("Failed to download attachment: %v", err)
-		iimpserver.WriteDownloadAttachment500Response(w, iimpserver.DownloadAttachment500Response{})
 		return
 	}
 }

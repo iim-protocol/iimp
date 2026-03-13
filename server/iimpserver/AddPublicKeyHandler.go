@@ -24,12 +24,26 @@ type AddPublicKeyRequest struct {
 
 type AddPublicKeyRequestBody struct {
 
+	// A unique identifier for the uploaded public key. This ID can be used to reference the key in future operations, such as encrypting messages for specific recipients or managing keys.
+	//
+	// Required
+	//
+	// Must be non-empty
+	KeyId string `json:"KeyId"`
+
 	// The public key to be added for end-to-end encryption. The key should be Base64URL Encoded X25519 Key.
 	//
 	// Required
 	//
 	// Must be non-empty
 	PublicKey string `json:"PublicKey"`
+
+	// Timestamp of key upload. Format => RFC3339.
+	//
+	// Required
+	//
+	// Must be non-empty
+	Timestamp string `json:"Timestamp"`
 }
 
 type AddPublicKeyRequestAuthParams struct {
@@ -46,6 +60,27 @@ type AddPublicKeyRequestAuthParams struct {
 
 func NewAddPublicKeyRequestBody(data map[string]any) (AddPublicKeyRequestBody, error) {
 	var body AddPublicKeyRequestBody
+
+	valKeyId, ok := data["KeyId"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'KeyId'")
+
+	} else {
+
+		valKeyIdTyped, ok := valKeyId.(string)
+		if !ok {
+			return body, fmt.Errorf("field 'KeyId' has incorrect type")
+		}
+
+		valKeyIdTyped = strings.TrimSpace(valKeyIdTyped)
+		if len(valKeyIdTyped) == 0 {
+			return body, fmt.Errorf("field 'KeyId' must be non-empty")
+		}
+
+		body.KeyId = valKeyIdTyped
+
+	}
 
 	valPublicKey, ok := data["PublicKey"]
 	if !ok {
@@ -65,6 +100,27 @@ func NewAddPublicKeyRequestBody(data map[string]any) (AddPublicKeyRequestBody, e
 		}
 
 		body.PublicKey = valPublicKeyTyped
+
+	}
+
+	valTimestamp, ok := data["Timestamp"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'Timestamp'")
+
+	} else {
+
+		valTimestampTyped, ok := valTimestamp.(string)
+		if !ok {
+			return body, fmt.Errorf("field 'Timestamp' has incorrect type")
+		}
+
+		valTimestampTyped = strings.TrimSpace(valTimestampTyped)
+		if len(valTimestampTyped) == 0 {
+			return body, fmt.Errorf("field 'Timestamp' must be non-empty")
+		}
+
+		body.Timestamp = valTimestampTyped
 
 	}
 
@@ -111,25 +167,6 @@ func NewAddPublicKeyRequest(w http.ResponseWriter, r *http.Request) (req AddPubl
 }
 
 type AddPublicKey201Response struct {
-
-	// Response body
-	Body AddPublicKey201ResponseBody
-}
-
-type AddPublicKey201ResponseBody struct {
-
-	// A unique identifier for the uploaded public key. This ID can be used to reference the key in future operations, such as encrypting messages for specific recipients or managing keys.
-	//
-	// Required
-	//
-	// Must be non-empty
-	KeyId string `json:"KeyId"`
-
-	// The timestamp when the public key was uploaded to the server. This can be used to determine the age of the key and manage key rotation policies.
-	//
-	// Required
-	//
-	UploadedAt string `json:"UploadedAt"`
 }
 
 // Public key added successfully.
@@ -139,14 +176,9 @@ type AddPublicKey201ResponseBody struct {
 func WriteAddPublicKey201Response(w http.ResponseWriter, response AddPublicKey201Response) error {
 	// Set headers, if any
 
-	// Set Content-Type
-	w.Header().Set("Content-Type", "application/json")
-
 	// Set status code and write the header
 	w.WriteHeader(201)
-
-	// Write body
-	return json.NewEncoder(w).Encode(response.Body)
+	return nil
 
 }
 

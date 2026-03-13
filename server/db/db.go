@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"strings"
 
 	dbmodels "github.com/iim-protocol/iimp/sdk/db-models"
 	"github.com/iim-protocol/iimp/server/config"
@@ -16,6 +17,7 @@ var Bucket *mongo.GridFSBucket
 
 // Connect establishes a connection to the MongoDB database using the provided URI and assigns the client to the package-level variable.
 func Connect(ctx context.Context, mongoURI string) (err error) {
+	mongoURI = strings.TrimSpace(mongoURI)
 	Client, err = mongo.Connect(options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		return err

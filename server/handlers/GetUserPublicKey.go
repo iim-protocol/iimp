@@ -41,9 +41,9 @@ func GetUserPublicKey(w http.ResponseWriter, r *http.Request) {
 	// Return the user's public key in the response
 	iimpserver.WriteGetUserPublicKey200Response(w, iimpserver.GetUserPublicKey200Response{
 		Body: iimpserver.GetUserPublicKey200ResponseBody{
-			KeyId:      userPublicKey.Id.Hex(),
+			KeyId:      userPublicKey.Id,
 			PublicKey:  userPublicKey.PublicKey,
-			UploadedAt: userPublicKey.Id.Timestamp().Format(time.RFC3339),
+			UploadedAt: userPublicKey.Timestamp.Time().Format(time.RFC3339),
 			UserId:     userPublicKey.UserId,
 		},
 	})

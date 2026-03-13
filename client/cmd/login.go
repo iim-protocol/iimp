@@ -6,8 +6,10 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/huh"
+	"github.com/iim-protocol/iimp/client/utils"
 	dbmodels "github.com/iim-protocol/iimp/sdk/db-models"
 	"github.com/iim-protocol/iimp/sdk/iimp_go_client"
 	"github.com/spf13/cobra"
@@ -25,14 +27,6 @@ var loginCmd = &cobra.Command{
 		var userId, password, serverUrl string
 
 		form := huh.NewForm(
-			huh.NewGroup(
-				huh.NewInput().Title("Server URL").Validate(func(s string) error {
-					if strings.TrimSpace(s) == "" {
-						return fmt.Errorf("server URL cannot be empty")
-					}
-					return nil
-				}).Value(&serverUrl),
-			),
 			huh.NewGroup(
 				huh.NewInput().Title("User ID").Description("(localpart@domain)").Validate(func(s string) error {
 					if strings.TrimSpace(s) == "" {
@@ -56,6 +50,13 @@ var loginCmd = &cobra.Command{
 			cmd.Printf("Error running form: %v\n", err)
 			return
 		}
+
+		domain, err := utils.ExtractDomainFromUserId(userId)
+		if err != nil {
+			fmt.Println("Error extracting domain from user ID:", err)
+			return
+		}
+		serverUrl = "https://" + domain
 
 		client := iimp_go_client.NewIIMP(serverUrl)
 		result, err := client.Login(cmd.Context(), iimp_go_client.LoginRequest{
@@ -85,6 +86,42 @@ var loginCmd = &cobra.Command{
 				return
 			}
 			fmt.Println("Login successful!")
+			keypairExists, err := dbmodels.KeypairExistsForServerAndUser(userId, serverUrl)
+			if err != nil {
+				fmt.Printf("Error checking for existing keypair: %v\n", err)
+				return
+			}
+			if keypairExists {
+				fmt.Println("Existing keypair found for this server and user. Skipping key generation.")
+				return
+			}
+			fmt.Println("Generating X25519 keypair for this server...")
+			localKeyPair, err := dbmodels.GenerateAndSaveKeys(userId, serverUrl)
+			if err != nil {
+				fmt.Println("Error generating keypair:", err)
+				return
+			}
+
+			authorization := "Bearer " + result.Response200.Body.SessionToken
+			resultPubKey, err := client.AddPublicKey(cmd.Context(), iimp_go_client.AddPublicKeyRequest{
+				Auth: iimp_go_client.AddPublicKeyRequestAuthParams{
+					Authorization: &authorization,
+				},
+				Body: iimp_go_client.AddPublicKeyRequestBody{
+					KeyId:     localKeyPair.KeyID,
+					PublicKey: localKeyPair.PublicKeyEncoded,
+					Timestamp: time.Now().Format(time.RFC3339),
+				},
+			})
+			if err != nil {
+				fmt.Println("Error adding public key:", err)
+				return
+			}
+			if resultPubKey.StatusCode != 201 {
+				fmt.Printf("Failed to add public key with status code: %d\n", resultPubKey.StatusCode)
+				return
+			}
+			fmt.Printf("Generated keypair with KeyID (%s) successfully!\n", localKeyPair.KeyID)
 		}
 	},
 }

@@ -20,6 +20,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/iim-protocol/iimp/client/utils"
 	dbmodels "github.com/iim-protocol/iimp/sdk/db-models"
 	"github.com/iim-protocol/iimp/sdk/iimp_go_client"
 	"github.com/spf13/cobra"
@@ -71,6 +72,19 @@ var rootCmd = &cobra.Command{
 				}
 				// Session Refreshed Successfully
 			}
+		}
+
+		// load the keys
+		err = dbmodels.LoadKeys()
+		if err != nil {
+			return fmt.Errorf("error loading keys: %v", err)
+		}
+
+		// Try to sync events with the server
+		err = utils.SyncOnce(cmd.Context(), false)
+		if err != nil {
+			// Log the error but don't block the user from using the client
+			fmt.Fprintf(os.Stderr, "Warning: Failed to sync with server: %v\n", err)
 		}
 		return nil
 	},

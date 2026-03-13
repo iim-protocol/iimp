@@ -12,6 +12,7 @@ import (
 	"github.com/iim-protocol/iimp/server/logger"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func UpdateConversation(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +106,7 @@ func UpdateConversation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// upsert the conversation in the database
-	upsertResult, err := db.DB.Collection(dbmodels.ConversationsCollection).ReplaceOne(r.Context(), conversationFilter, conversation)
+	upsertResult, err := db.DB.Collection(dbmodels.ConversationsCollection).ReplaceOne(r.Context(), conversationFilter, conversation, options.Replace().SetUpsert(true))
 	if err != nil || upsertResult.MatchedCount == 0 {
 		logger.Error.Printf("Upsert matched 0 conversations or Failed to upsert conversation in database: %v", err)
 		iimpserver.WriteUpdateConversation500Response(w, iimpserver.UpdateConversation500Response{})

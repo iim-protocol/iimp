@@ -73,11 +73,19 @@ func NewMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = db.DB.Collection(dbmodels.MessagesCollection).InsertOne(r.Context(), message)
+	insertResult, err := db.DB.Collection(dbmodels.MessagesCollection).InsertOne(r.Context(), message)
 	if err != nil {
 		logger.Error.Printf("Failed to save message to database: %v", err)
 		iimpserver.WriteNewMessage500Response(w, iimpserver.NewMessage500Response{})
 		return
+	}
+
+	if msgId, ok := insertResult.InsertedID.(bson.ObjectID); !ok {
+		logger.Error.Printf("Failed to parse inserted message ID: %v", insertResult.InsertedID)
+		iimpserver.WriteNewMessage500Response(w, iimpserver.NewMessage500Response{})
+		return
+	} else {
+		message.Id = msgId
 	}
 
 	err = broadcastMessage(r.Context(), &message, &conversation)
@@ -105,10 +113,12 @@ func makeMessageFromNewMessageRequest(req *iimpserver.NewMessageRequest, convers
 			return dbmodels.Message{}, fmt.Errorf("attachment size exceeds limit: %v bytes", attachment.Size)
 		}
 		attachments = append(attachments, dbmodels.Attachment{
-			FileId:      fileId,
-			Filename:    attachment.Filename,
-			ContentType: attachment.ContentType,
-			Size:        int64(attachment.Size),
+			FileId:          fileId,
+			Filename:        attachment.Filename,
+			ContentType:     attachment.ContentType,
+			Size:            int64(attachment.Size),
+			FileHash:        attachment.FileHash,
+			AttachmentNonce: attachment.AttachmentNonce,
 		})
 	}
 	msgTimestamp, err := time.Parse(time.RFC3339, req.Body.MessageContent.Timestamp)

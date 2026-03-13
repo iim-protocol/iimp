@@ -236,69 +236,6 @@ export class IIMP {
   
   
   // Throws IIMPError, or a network error
-  async DownloadAttachmentBytesFederation(params: Models.DownloadAttachmentBytesFederationRequest): Promise<DownloadAttachmentBytesFederationResult> {
-    var result = {} as DownloadAttachmentBytesFederationResult;
-    Models.ValidateDownloadAttachmentBytesFederationRequest(params);
-
-    var path = "/iimp/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes";
-    
-    var pathParamFileId = paramToString(params.FileId, "path parameter: FileId", "string", true);
-    path = path.replace("{fileId}", encodeURIComponent(pathParamFileId));
-    
-    var pathParamMessageId = paramToString(params.MessageId, "path parameter: MessageId", "string", true);
-    path = path.replace("{messageId}", encodeURIComponent(pathParamMessageId));
-    
-    var pathParamConversationId = paramToString(params.ConversationId, "path parameter: ConversationId", "string", true);
-    path = path.replace("{conversationId}", encodeURIComponent(pathParamConversationId));
-    
-    const url = new URL(this.baseURL + path);
-    
-
-    var requestInit: RequestInit = {
-      method: "GET",
-    }
-    
-    
-    const request = new Request(url, this.addHeaders(requestInit));
-    const response = await fetch(request);
-    result.StatusCode = response.status;
-    switch (response.status) {
-    
-      case 200:
-        result.Response200 = await Models.NewDownloadAttachmentBytesFederation200Response(response);
-        break;
-    
-      case 400:
-        result.Response400 = await Models.NewDownloadAttachmentBytesFederation400Response(response);
-        break;
-    
-      case 401:
-        result.Response401 = await Models.NewDownloadAttachmentBytesFederation401Response(response);
-        break;
-    
-      case 403:
-        result.Response403 = await Models.NewDownloadAttachmentBytesFederation403Response(response);
-        break;
-    
-      case 404:
-        result.Response404 = await Models.NewDownloadAttachmentBytesFederation404Response(response);
-        break;
-    
-      case 500:
-        result.Response500 = await Models.NewDownloadAttachmentBytesFederation500Response(response);
-        break;
-    
-      default:
-        result.UnknownResponse = {
-          StatusCode: response.status,
-          Resp: response,
-        };
-    }
-    return result;
-  }
-  
-  
-  // Throws IIMPError, or a network error
   async EditMessage(params: Models.EditMessageRequest): Promise<EditMessageResult> {
     var result = {} as EditMessageResult;
     Models.ValidateEditMessageRequest(params);
@@ -424,6 +361,10 @@ export class IIMP {
     
       case 200:
         result.Response200 = await Models.NewGetUserInfoFederation200Response(response);
+        break;
+    
+      case 400:
+        result.Response400 = await Models.NewGetUserInfoFederation400Response(response);
         break;
     
       case 401:
@@ -1437,24 +1378,6 @@ export type DownloadAttachmentResult = {
   UnknownResponse: UnknownStatusResponse;
 }
 
-export type DownloadAttachmentBytesFederationResult = {
-  StatusCode: number;
-  
-  Response200: Models.DownloadAttachmentBytesFederation200Response;
-  
-  Response400: Models.DownloadAttachmentBytesFederation400Response;
-  
-  Response401: Models.DownloadAttachmentBytesFederation401Response;
-  
-  Response403: Models.DownloadAttachmentBytesFederation403Response;
-  
-  Response404: Models.DownloadAttachmentBytesFederation404Response;
-  
-  Response500: Models.DownloadAttachmentBytesFederation500Response;
-  
-  UnknownResponse: UnknownStatusResponse;
-}
-
 export type EditMessageResult = {
   StatusCode: number;
   
@@ -1487,6 +1410,8 @@ export type GetUserInfoFederationResult = {
   StatusCode: number;
   
   Response200: Models.GetUserInfoFederation200Response;
+  
+  Response400: Models.GetUserInfoFederation400Response;
   
   Response401: Models.GetUserInfoFederation401Response;
   

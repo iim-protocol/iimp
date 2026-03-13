@@ -137,27 +137,24 @@ schemas:
         description: A cursor for the next page of results, if available. This field will be included in the response if there are more events available beyond the returned list.
         type: string
         required: false
-  NewPublicKeyResponseBody: &newPublicKeyResponseBody
-    description: Details of the added public key.
+  NewPublicKeyRequestBody: &newPublicKeyRequestBody
+    description: Public key details.
     properties:
       KeyId:
         type: string
         description: A unique identifier for the uploaded public key. This ID can be used to reference the key in future operations, such as encrypting messages for specific recipients or managing keys.
         required: true
         nonEmpty: true
-      UploadedAt:
-        type: string
-        format: date-time
-        description: The timestamp when the public key was uploaded to the server. This can be used to determine the age of the key and manage key rotation policies.
-        required: true
-  NewPublicKeyRequestBody: &newPublicKeyRequestBody
-    description: Public key details.
-    properties:
       PublicKey:
         type: string
         required: true
         nonEmpty: true
         description: The public key to be added for end-to-end encryption. The key should be Base64URL Encoded X25519 Key.
+      Timestamp:
+        type: string
+        required: true
+        nonEmpty: true
+        description: Timestamp of key upload. Format => RFC3339.
   RefreshSessionRequestBody: &refreshSessionRequestBody
     description: Refresh token details.
     properties:
@@ -268,6 +265,11 @@ schemas:
       required: true
       nonEmpty: true
       description: A hash of the attachment file content (SHA-256 hash) used for integrity verification. The server can use this hash to verify that the attachment file has not been tampered with during storage or transmission.
+    AttachmentNonce:
+      type: string
+      required: true
+      nonEmpty: true
+      description: The nonce used in the encryption of the attachment file. This should be a unique value for each attachment encrypted with the same AES key to ensure security. The symmetric key used is the same as the Version 1 message content.
   MessageEncryptionDetails: &messageEncryptionDetails
     KeyId:
       type: string
@@ -678,7 +680,6 @@ spec:
       responses:
         201:
           description: Public key added successfully.
-          body: *newPublicKeyResponseBody
         400:
           description: Invalid input data.
         401:
@@ -1086,6 +1087,8 @@ spec:
           body:
             description: User info required for federation.
             properties: *federationUserInfo
+        400:
+          description: Invalid input data.
         401:
           description: Unauthorized. No valid server token provided.
         404:
@@ -1144,39 +1147,3 @@ spec:
           description: Conversation not found.
         500:
           description: Internal server error while sending the message from federation request.
-    DownloadAttachmentBytesFederation:
-      path: /iimp/api/federation/conversations/{conversationId}/messages/{messageId}/attachments/{fileId}/bytes
-      method: GET
-      description: \"FEDERATION\" Download the bytes of an attachment from another server. This is a noop endpoint for documentation purposes, the server should implement fetching the actual bytes using the provided endpoint. Server must implement this, requesting server needs to fetch the bytes NOT using the SDK.
-      auth:
-        all:
-          - serverToken
-      pathParams:
-        - name: FileId
-          transportName: fileId
-          type: string
-          required: true
-          description: Unique identifier of the file to fetch.
-        - name: MessageId
-          transportName: messageId
-          type: string
-          required: true
-          description: Unique identifier of the message that the file/attachment belongs to.
-        - name: ConversationId
-          transportName: conversationId
-          type: string
-          required: true
-          description: Unique identifier of the conversation that the message belongs to.
-      responses:
-        200:
-          description: Attachment bytes fetched successfully from federation request.
-        400:
-          description: Invalid input data.
-        401:
-          description: Unauthorized. No valid server token provided.
-        403:
-          description: Forbidden. The requesting server is not allowed to access the attachment.
-        404:
-          description: Conversation, message, or attachment not found, or the attachment does not belong to the message or the message does not belong to the conversation specified in the path parameters.
-        500:
-          description: Internal server error while fetching the attachment bytes from federation request.

@@ -89,6 +89,13 @@ type MessageFederationRequestBody struct {
 
 type MessageFederationRequestBodyAttachmentsItem struct {
 
+	// The nonce used in the encryption of the attachment file. This should be a unique value for each attachment encrypted with the same AES key to ensure security. The symmetric key used is the same as the Version 1 message content.
+	//
+	// Required
+	//
+	// Must be non-empty
+	AttachmentNonce string `json:"AttachmentNonce"`
+
 	// The MIME type of the attachment (e.g., "image/png", "application/pdf", etc.).
 	//
 	// Required
@@ -461,6 +468,27 @@ func NewMessageFederationRequestBody(data map[string]any) (MessageFederationRequ
 
 func NewMessageFederationRequestBodyAttachmentsItem(data map[string]any) (MessageFederationRequestBodyAttachmentsItem, error) {
 	var body MessageFederationRequestBodyAttachmentsItem
+
+	valAttachmentNonce, ok := data["AttachmentNonce"]
+	if !ok {
+
+		return body, fmt.Errorf("missing required field 'AttachmentNonce'")
+
+	} else {
+
+		valAttachmentNonceTyped, ok := valAttachmentNonce.(string)
+		if !ok {
+			return body, fmt.Errorf("field 'AttachmentNonce' has incorrect type")
+		}
+
+		valAttachmentNonceTyped = strings.TrimSpace(valAttachmentNonceTyped)
+		if len(valAttachmentNonceTyped) == 0 {
+			return body, fmt.Errorf("field 'AttachmentNonce' must be non-empty")
+		}
+
+		body.AttachmentNonce = valAttachmentNonceTyped
+
+	}
 
 	valContentType, ok := data["ContentType"]
 	if !ok {
