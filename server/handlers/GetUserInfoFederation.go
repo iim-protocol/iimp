@@ -28,7 +28,7 @@ func GetUserInfoFederation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user dbmodels.User
-	userFilter := bson.D{{Key: "userId", Value: req.UserId}}
+	userFilter := bson.D{{Key: "user_id", Value: req.UserId}}
 	err = db.DB.Collection(dbmodels.UsersCollection).FindOne(r.Context(), userFilter).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {

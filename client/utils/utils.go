@@ -211,13 +211,12 @@ func FetchRecipientPublicKeys(ctx context.Context, conversation dbmodels.Convers
 	recipientPublicKeys := make([]e2e.RecipientPublicKey, len(eligibleParticipants))
 
 	for i, ep := range eligibleParticipants {
-		// domain, err := utils.ExtractDomainFromUserId(ep.UserId)
-		// if err != nil {
-		// 	return nil, fmt.Errorf("failed to extract domain from user id (%s): %w", ep.UserId, err)
-		// }
-		// baseUrl := "https://"+domain
-		// iimpClient := iimp_go_client.NewIIMP(baseUrl)
-		iimpClient := iimp_go_client.NewIIMP(dbmodels.IIMPSession.ServerUrl)
+		domain, err := ExtractDomainFromUserId(ep.UserId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to extract domain from user id (%s): %w", ep.UserId, err)
+		}
+		baseUrl := "https://" + domain
+		iimpClient := iimp_go_client.NewIIMP(baseUrl)
 		result, err := iimpClient.GetUserPublicKey(ctx, iimp_go_client.GetUserPublicKeyRequest{
 			UserId: ep.UserId,
 		})
