@@ -320,6 +320,7 @@ func createMessageBroadcastRequestBody(message *dbmodels.Message, conversation *
 			Filename:        attachment.Filename,
 			ContentType:     attachment.ContentType,
 			Size:            float64(attachment.Size),
+			FileHash:        attachment.FileHash,
 			AttachmentNonce: attachment.AttachmentNonce,
 		}
 	}

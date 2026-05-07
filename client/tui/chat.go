@@ -367,7 +367,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = msg.messages
 		m.viewport.SetContent(m.renderMessages())
 		m.viewport.GotoBottom()
-		cmds = append(cmds, tickCmd(time.Second*5, m.syncCmd()))
+		cmds = append(cmds, tickCmd(time.Second*1, m.syncCmd()))
 
 	case sentMessageOkMsg:
 		// Reset state
@@ -388,8 +388,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.textarea, cmd = m.textarea.Update(msg)
 		cmds = append(cmds, cmd)
 	}
-	m.viewport, cmd = m.viewport.Update(msg)
-	cmds = append(cmds, cmd)
+	if m.selectedMsgIndex != -1 {
+		m.viewport, cmd = m.viewport.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 	if _, ok := msg.(tea.KeyMsg); !ok {
 		var fpCmd tea.Cmd
 		m.filepicker, fpCmd = m.filepicker.Update(msg)
